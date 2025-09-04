@@ -677,6 +677,16 @@ async function startCamera() {
   }
 }
 
+function stopCamera() {
+  if (videoRef.current && videoRef.current.srcObject) {
+    let tracks = videoRef.current.srcObject.getTracks();
+    tracks.forEach(track => track.stop());
+    videoRef.current.srcObject = null;
+  }
+  setStreaming(false);
+}
+
+
 // Capture high-resolution photo
 function capturePhoto() {
   if (!videoRef.current || !canvasRef.current) return;

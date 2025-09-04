@@ -509,7 +509,6 @@
 //     </div>
 //   );
 // }
-
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../utils/api";
@@ -518,62 +517,51 @@ import Tesseract from "tesseract.js";
 
 // --- Helper to extract fields from OCR text ---
 function extractFields(text) {
-  const fields = {
-    name: "",
-    designation: "",
-    company: "",
-    number: "",
-    email: "",
-    site: "",
-    address: "",
-    raw: text, // keep everything!
-  };
-
+  const fields = { name: "", designation: "", company: "", number: "", email: "", site: "", address: "" };
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
   // email
-  const e = lines.find(l => /\S+@\S+\.\S+/.test(l));
+  const e = lines.find(l => l.includes("@") && l.includes("."));
   if (e) fields.email = e;
 
   // phone
-  const phoneRegex = /(\+?\d[\d\s\-]{7,})/;
-  const phoneLine = lines.find(l => phoneRegex.test(l));
-  if (phoneLine) fields.number = phoneLine.match(phoneRegex)[0];
+  for (const l of lines) {
+    const digits = (l.match(/\d/g) || []).length;
+    if (!fields.number && digits >= 8) {
+      fields.number = l;
+      break;
+    }
+  }
 
-  // website
-  const siteRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
-  const siteLine = lines.find(l => siteRegex.test(l));
-  if (siteLine) fields.site = siteLine.match(siteRegex)[0];
+  // site
+  const s = lines.find(l => /www\.|http/i.test(l));
+  if (s) fields.site = s;
 
-  // designation (looser match)
+  // designation
   const desigK = ["director","manager","ceo","cto","cfo","founder","engineer","marketing","owner","sales","lead","consultant"];
   const d = lines.find(l => desigK.some(k => l.toLowerCase().includes(k)));
   if (d) fields.designation = d;
 
-  // company (first non-email/site/designation line in Title Case or CAPS)
-  const c = lines.find(l =>
-    !l.includes("@") &&
-    !/www\.|http/i.test(l) &&
-    l.length > 2 &&
-    (l === l.toUpperCase() || /^[A-Z][a-z]+/.test(l))
-  );
+  // company (all caps)
+  const c = lines.find(l => l === l.toUpperCase() && !l.includes("@") && !/www\.|http/i.test(l) && l.length > 2);
   if (c) fields.company = c;
 
-  // name (first 2-word capitalized line that’s not company/designation)
+  // name
   const n = lines.find(l => {
-    if ([fields.company, fields.designation].includes(l)) return false;
+    if (l === fields.company || l === fields.designation) return false;
     if (/@|www\.|http/.test(l)) return false;
-    return /^[A-Z][a-z]+\s+[A-Z][a-z]+$/.test(l);
+    const parts = l.split(/\s+/);
+    return parts.length === 2 && parts.every(p => /^[A-Z][a-zA-Z]+$/.test(p));
   });
   if (n) fields.name = n;
 
-  // address (collect multiple lines near the bottom)
-  const addressLines = lines.slice(-3).filter(l => /[0-9,]/.test(l));
-  if (addressLines.length) fields.address = addressLines.join(", ");
+  // address
+  const rev = [...lines].reverse();
+  const a = rev.find(l => l.length > 12 && /[,0-9]/.test(l) && !/@|www\.|http/.test(l));
+  if (a) fields.address = a;
 
   return fields;
 }
-
 
 export default function Home() {
   const { token, role } = useAuth();
@@ -652,11 +640,7 @@ export default function Home() {
     }
   };
 
-  // ---- Camera Controls ----
- 
-
-// Start camera
-// Start camera (with back camera + high resolution)
+  // ---- Camera Controls ----// Start camera (with back camera + high resolution)
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -676,17 +660,18 @@ async function startCamera() {
     alert("Camera access denied: " + err.message);
   }
 }
-// Stop camera
-function stopCamera() {
-  if (videoRef.current && videoRef.current.srcObject) {
-    let tracks = videoRef.current.srcObject.getTracks();
-    tracks.forEach(track => track.stop());
-    videoRef.current.srcObject = null;
-  }
-  setStreaming(false);
-}
 
-// Capture photo and run OCR
+
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setStreaming(false);
+    setCapturedPreview(null);
+  };
+// Capture high-resolution photo
 function capturePhoto() {
   if (!videoRef.current || !canvasRef.current) return;
 
@@ -706,13 +691,10 @@ function capturePhoto() {
 
   // Convert to file for OCR upload
   fetch(dataUrl)
-    .then(res => res.blob())
-    .then(blob => {
+    .then((res) => res.blob())
+    .then((blob) => {
       const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
       setFile(file);
-
-      // ⬅️ Automatically run OCR after capture
-      handleExtract(file);
     });
 }
 
@@ -847,7 +829,7 @@ function capturePhoto() {
                         height: "300px",
                         objectFit: "cover",
                         borderRadius: "8px",
-                        // background: "white",
+                        background: "#000",
                       }}
                     />
                     <canvas ref={canvasRef} style={{ display: "none" }} />

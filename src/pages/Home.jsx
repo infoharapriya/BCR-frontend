@@ -382,7 +382,7 @@ export default function Home() {
                         width: "100%",
                         height: "300px",
                         objectFit: "cover",
-                        background: "black",
+                        // background: "green",
                       }}
                     />
                     <canvas ref={canvasRef} style={{ display: "none" }} />

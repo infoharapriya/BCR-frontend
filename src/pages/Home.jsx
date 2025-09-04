@@ -1,3 +1,4 @@
+// Home.jsx
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../utils/api";
@@ -37,113 +38,77 @@ export default function Home() {
     return () => stopCamera(); // cleanup on unmount
   }, []);
 
-  const addEvent = async () => {
-    const name = prompt("New event name:");
-    if (!name) return;
-    try {
-      await api("/api/events", {
-        method: "POST",
-        body: { name },
-        token,
-      });
-      await fetchEvents();
-      showMsg("Event added.");
-    } catch (e) {
-      alert(e.message);
-    }
-  };
+  // ---- UTIL: compress image < 1MB ----
+  async function compressImage(file, maxWidth = 1000, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
 
-  const editEvent = async () => {
-    const ev = events.find((e) => e.name === selectedEvent);
-    if (!ev) return alert("No event selected");
-    const newName = prompt("Edit event name:", ev.name);
-    if (!newName) return;
+      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onerror = reject;
 
-    try {
-      await api(`/api/events/${ev._id}`, {
-        method: "PUT",
-        body: { name: newName },
-        token,
-      });
-      await fetchEvents();
-      setSelectedEvent(newName);
-      showMsg("Event updated.");
-    } catch (e) {
-      alert(e.message);
-    }
-  };
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
 
-  const deleteEvent = async () => {
-    const ev = events.find((e) => e.name === selectedEvent);
-    if (!ev) return alert("No event selected");
-    if (!window.confirm(`Delete event "${ev.name}"?`)) return;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    try {
-      await api(`/api/events/${ev._id}`, { method: "DELETE", token });
-      await fetchEvents();
-      setSelectedEvent("");
-      showMsg("Event deleted.");
-    } catch (e) {
-      alert(e.message);
-    }
-  };
+        const tryCompress = (q) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return reject("Compression failed");
+              console.log("Compressed size:", blob.size / 1024, "KB");
 
-  // ---- OCR UPLOAD ----
-  // Utility to compress/rescale image before sending
-async function compressImage(file, maxWidth = 1000, quality = 0.8) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
+              if (blob.size > 1024 * 1024 && q > 0.3) {
+                // keep reducing quality until < 1 MB
+                tryCompress(q - 0.1);
+              } else {
+                resolve(
+                  new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" })
+                );
+              }
+            },
+            "image/jpeg",
+            q
+          );
+        };
 
-    reader.onload = (e) => { img.src = e.target.result; };
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const scale = Math.min(1, maxWidth / img.width); // only shrink if too large
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+        tryCompress(quality);
+      };
 
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob(
-        (blob) => {
-          resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
-        },
-        "image/jpeg",
-        quality
-      );
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-const handleExtract = async (chosenFile) => {
-  try {
-    // ✅ compress before sending
-    const compressedFile = await compressImage(chosenFile);
-
-    const fd = new FormData();
-    fd.append("image", compressedFile);
-    fd.append("detectOrientation", "true"); // keep orientation
-
-    const data = await api("/api/ocr/scan", {
-      method: "POST",
-      body: fd,
-      token,
-      isForm: true,
+      reader.readAsDataURL(file);
     });
-
-    setResult(data);
-    setFormData({
-      ...data.fields,
-      event: selectedEvent,
-      type: selectedType,
-    });
-  } catch (e) {
-    alert(e.message);
   }
-};
 
+  // ---- OCR ----
+  const handleExtract = async (chosenFile) => {
+    try {
+      const compressedFile = await compressImage(chosenFile);
+
+      const fd = new FormData();
+      fd.append("image", compressedFile);
+      fd.append("detectOrientation", "true");
+
+      const data = await api("/api/ocr/scan", {
+        method: "POST",
+        body: fd,
+        token,
+        isForm: true,
+      });
+
+      setResult(data);
+      setFormData({
+        ...data.fields,
+        event: selectedEvent,
+        type: selectedType,
+      });
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   const onSubmitUpload = async (e) => {
     e.preventDefault();
@@ -153,37 +118,36 @@ const handleExtract = async (chosenFile) => {
 
   // ---- CAMERA ----
   const startCamera = async () => {
-  try {
-    let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: "environment" } }, // back camera
-        audio: false,
-      });
-    } catch {
-      console.warn("Back camera not available, using default/front camera");
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false,
-      });
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.onloadedmetadata = () => {
-        videoRef.current.play().catch((err) => {
-          console.error("Video play error:", err);
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } },
+          audio: false,
         });
-      };
+      } catch {
+        console.warn("Back camera not available, using default/front camera");
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play().catch((err) => {
+            console.error("Video play error:", err);
+          });
+        };
+      }
+
+      setStreaming(true);
+    } catch (err) {
+      console.error("Camera error:", err);
+      alert(`Camera error: ${err.name} - ${err.message}`);
     }
-
-    setStreaming(true);
-  } catch (err) {
-    console.error("Camera error:", err);
-    alert(`Camera error: ${err.name} - ${err.message}`);
-  }
-};
-
+  };
 
   const stopCamera = () => {
     const v = videoRef.current;
@@ -195,40 +159,36 @@ const handleExtract = async (chosenFile) => {
   };
 
   const capturePhoto = async () => {
-  const v = videoRef.current,
-    c = canvasRef.current;
-  if (!v || !c) return;
+    const v = videoRef.current,
+      c = canvasRef.current;
+    if (!v || !c) return;
 
-  // set resolution to at least 1280x720
-  c.width = v.videoWidth || 1280;
-  c.height = v.videoHeight || 720;
+    c.width = v.videoWidth || 1280;
+    c.height = v.videoHeight || 720;
 
-  const ctx = c.getContext("2d");
-  ctx.drawImage(v, 0, 0, c.width, c.height);
+    const ctx = c.getContext("2d");
+    ctx.drawImage(v, 0, 0, c.width, c.height);
 
-  // show preview
-  setCapturedPreview(c.toDataURL("image/jpeg", 0.9));
+    setCapturedPreview(c.toDataURL("image/jpeg", 0.9));
 
-  c.toBlob(
-    async (blob) => {
-      if (!blob) {
-        alert("Capture failed");
-        return;
-      }
-      console.log("Captured size (before compress):", blob.size, "bytes");
-      const f = new File([blob], "capture.jpg", { type: "image/jpeg" });
+    c.toBlob(
+      async (blob) => {
+        if (!blob) {
+          alert("Capture failed");
+          return;
+        }
+        console.log("Captured size (before compress):", blob.size, "bytes");
+        const f = new File([blob], "capture.jpg", { type: "image/jpeg" });
 
-      // ✅ compress like uploads
-      const compressed = await compressImage(f);
+        const compressed = await compressImage(f);
 
-      console.log("Captured size (after compress):", compressed.size, "bytes");
-      await handleExtract(compressed);
-    },
-    "image/jpeg",
-    0.9 // use JPEG with compression
-  );
-};
-
+        console.log("Captured size (after compress):", compressed.size, "bytes");
+        await handleExtract(compressed);
+      },
+      "image/jpeg",
+      0.9
+    );
+  };
 
   // ---- SAVE ----
   const handleSave = async () => {
@@ -261,7 +221,7 @@ const handleExtract = async (chosenFile) => {
     }
   };
 
-  // ---- QR RESULT ----
+  // ---- QR ----
   const onQRResult = (decodedText) => {
     let f = {};
     try {
@@ -340,31 +300,6 @@ const handleExtract = async (chosenFile) => {
             </select>
           </label>
         </div>
-
-        {/* Admin Controls */}
-        {role === "admin" && (
-          <div className="actions" style={{ marginTop: 6 }}>
-            <button className="btn success" onClick={addEvent}>
-              + Add Event
-            </button>
-            {selectedEvent && (
-              <>
-                <button className="btn" onClick={editEvent}>
-                  ✏️ Edit
-                </button>
-                <button className="btn danger" onClick={deleteEvent}>
-                  🗑 Delete
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {!readyToUpload && (
-          <div className="notice info">
-            Select <b>Event</b> and <b>Type</b> to continue.
-          </div>
-        )}
 
         {/* Upload / Camera / QR */}
         {readyToUpload && (

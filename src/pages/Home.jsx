@@ -365,47 +365,64 @@ export default function Home() {
                 </form>
               </div>
 
-              {/* Camera */}
+              {/* Camera Section */}
               <div className="col-6">
-                {!streaming ? (
-                  <button className="btn" onClick={startCamera}>
-                    📷 Open Camera
-                  </button>
-                ) : (
-                  <div>
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      style={{
-                        width: "100%",
-                        height: "300px",
-                        objectFit: "cover",
-                        // background: "green",
-                      }}
-                    />
-                    <canvas ref={canvasRef} style={{ display: "none" }} />
-                    <div className="actions" style={{ marginTop: 8 }}>
-                      <button className="btn" onClick={capturePhoto}>
-                        📸 Capture & Extract
-                      </button>
-                      <button className="btn secondary" onClick={stopCamera}>
-                        Close Camera
-                      </button>
-                    </div>
-                    {capturedPreview && (
-                      <div style={{ marginTop: 8 }}>
-                        <p>Captured Image:</p>
-                        <img
-                          src={capturedPreview}
-                          alt="preview"
-                          style={{ width: "100%", border: "1px solid #ccc" }}
-                        />
+                <div className="camera-box" style={{ marginTop: 10 }}>
+                  {!streaming ? (
+                    <button className="btn" onClick={startCamera}>
+                      📷 Start Scan
+                    </button>
+                  ) : (
+                    <div style={{ textAlign: "center" }}>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        style={{
+                          width: "100%",
+                          maxWidth: "500px",
+                          height: "300px",
+                          objectFit: "cover",
+                          borderRadius: "8px",
+                          background: "#f9f9f9",
+                        }}
+                      />
+                      <canvas ref={canvasRef} style={{ display: "none" }} />
+
+                      <div
+                        style={{
+                          marginTop: 10,
+                          display: "flex",
+                          gap: "10px",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <button className="btn" onClick={capturePhoto}>
+                          📸 Extract
+                        </button>
+                        <button className="btn secondary" onClick={stopCamera}>
+                          Stop Scan
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {capturedPreview && (
+                        <div style={{ marginTop: 12 }}>
+                          <p>Captured Image:</p>
+                          <img
+                            src={capturedPreview}
+                            alt="Captured"
+                            style={{
+                              width: "100%",
+                              maxWidth: "500px",
+                              border: "1px solid #ddd",
+                              borderRadius: "6px",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -418,9 +435,7 @@ export default function Home() {
 
         {msg && (
           <div
-            className={`notice ${
-              msg.includes("fail") ? "error" : "success"
-            }`}
+            className={`notice ${msg.includes("fail") ? "error" : "success"}`}
           >
             {msg}
           </div>

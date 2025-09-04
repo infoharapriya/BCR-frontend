@@ -37,6 +37,57 @@ export default function Home() {
     return () => stopCamera();
   }, []);
 
+  const addEvent = async () => {
+    const name = prompt("New event name:");
+    if (!name) return;
+    try {
+      await api("/api/events", {
+        method: "POST",
+        body: { name },
+        token,
+      });
+      await fetchEvents();
+      showMsg("Event added.");
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const editEvent = async () => {
+    const ev = events.find((e) => e.name === selectedEvent);
+    if (!ev) return alert("No event selected");
+    const newName = prompt("Edit event name:", ev.name);
+    if (!newName) return;
+
+    try {
+      await api(`/api/events/${ev._id}`, {
+        method: "PUT",
+        body: { name: newName },
+        token,
+      });
+      await fetchEvents();
+      setSelectedEvent(newName);
+      showMsg("Event updated.");
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const deleteEvent = async () => {
+    const ev = events.find((e) => e.name === selectedEvent);
+    if (!ev) return alert("No event selected");
+    if (!window.confirm(`Delete event "${ev.name}"?`)) return;
+
+    try {
+      await api(`/api/events/${ev._id}`, { method: "DELETE", token });
+      await fetchEvents();
+      setSelectedEvent("");
+      showMsg("Event deleted.");
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   // ---- IMAGE COMPRESSION ----
   async function compressImage(file, maxWidth = 1000, quality = 0.7) {
     return new Promise((resolve) => {
@@ -235,7 +286,57 @@ export default function Home() {
         </h2>
 
         {/* Selectors */}
-        {/* ... keep your event/type selector & admin controls ... */}
+        <div className="row">
+          <div className="col-6">
+            <label>
+              Event
+              <select
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+              >
+                <option value="">-- Select --</option>
+                {Array.isArray(events) &&
+                  events.map((ev) => (
+                    <option key={ev._id} value={ev.name}>
+                      {ev.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+          <div className="col-6">
+            <label>
+              Type
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                <option value="">-- Select --</option>
+                <option value="Customer">Customer</option>
+                <option value="Supplier">Supplier</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {/* Admin Controls */}
+        {role === "admin" && (
+          <div className="actions" style={{ marginTop: 6 }}>
+            <button className="btn success" onClick={addEvent}>
+              + Add Event
+            </button>
+            {selectedEvent && (
+              <>
+                <button className="btn" onClick={editEvent}>
+                  ✏️ Edit
+                </button>
+                <button className="btn danger" onClick={deleteEvent}>
+                  🗑 Delete
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {!readyToUpload && (
           <div className="notice info">
@@ -325,8 +426,53 @@ export default function Home() {
           </div>
         )}
 
-        {/* Editable form (kept same) */}
-        {/* ... your formData edit/save UI ... */}
+        {/* Editable form */}
+        {formData && (
+          <div className="row" style={{ marginTop: 16 }}>
+            <div className="col-12">
+              <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
+            </div>
+            {[
+              ["Name", "name"],
+              ["Designation", "designation"],
+              ["Company", "company"],
+              ["Number", "number"],
+              ["Email", "email"],
+              ["Website", "site"],
+            ].map(([label, key]) => (
+              <div className="col-6" key={key}>
+                <label>
+                  {label}
+                  <input
+                    className="input"
+                    value={formData[key] || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, [key]: e.target.value })
+                    }
+                  />
+                </label>
+              </div>
+            ))}
+            <div className="col-12">
+              <label>
+                Address
+                <textarea
+                  className="input"
+                  rows="3"
+                  value={formData.address || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                />
+              </label>
+            </div>
+            <div className="col-12 actions">
+              <button className="btn" onClick={handleSave}>
+                Save
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Raw OCR */}
         {result?.raw && (

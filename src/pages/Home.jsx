@@ -647,10 +647,20 @@ export default function Home() {
 // Start camera
 const startCamera = async () => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    setStreaming(true);
+    let stream;
+    try {
+      // Try back camera first
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: "environment" } },
+      });
+    } catch {
+      // Fallback to front if not available
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+      });
+    }
 
-    // Wait for React to render <video>
+    setStreaming(true);
     setTimeout(() => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;

@@ -187,7 +187,7 @@ export default function Home() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: "environment" }, // back camera if possible
+          facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -199,15 +199,13 @@ export default function Home() {
  
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
-      videoRef.current.setAttribute("playsinline", true);
       videoRef.current.muted = true;
+      videoRef.current.playsInline = true;
+      videoRef.current.autoplay = true;
  
-      // ✅ wait for metadata before play
-      videoRef.current.onloadedmetadata = () => {
-        videoRef.current.play().catch((err) =>
-          console.error("Video play error:", err)
-        );
-      };
+      await videoRef.current.play().catch((err) => {
+        console.error("Video play error:", err);
+      });
     }
  
     setStreaming(true);

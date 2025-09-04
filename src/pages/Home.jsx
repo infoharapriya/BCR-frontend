@@ -518,51 +518,62 @@ import Tesseract from "tesseract.js";
 
 // --- Helper to extract fields from OCR text ---
 function extractFields(text) {
-  const fields = { name: "", designation: "", company: "", number: "", email: "", site: "", address: "" };
+  const fields = {
+    name: "",
+    designation: "",
+    company: "",
+    number: "",
+    email: "",
+    site: "",
+    address: "",
+    raw: text, // keep everything!
+  };
+
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
   // email
-  const e = lines.find(l => l.includes("@") && l.includes("."));
+  const e = lines.find(l => /\S+@\S+\.\S+/.test(l));
   if (e) fields.email = e;
 
   // phone
-  for (const l of lines) {
-    const digits = (l.match(/\d/g) || []).length;
-    if (!fields.number && digits >= 8) {
-      fields.number = l;
-      break;
-    }
-  }
+  const phoneRegex = /(\+?\d[\d\s\-]{7,})/;
+  const phoneLine = lines.find(l => phoneRegex.test(l));
+  if (phoneLine) fields.number = phoneLine.match(phoneRegex)[0];
 
-  // site
-  const s = lines.find(l => /www\.|http/i.test(l));
-  if (s) fields.site = s;
+  // website
+  const siteRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
+  const siteLine = lines.find(l => siteRegex.test(l));
+  if (siteLine) fields.site = siteLine.match(siteRegex)[0];
 
-  // designation
+  // designation (looser match)
   const desigK = ["director","manager","ceo","cto","cfo","founder","engineer","marketing","owner","sales","lead","consultant"];
   const d = lines.find(l => desigK.some(k => l.toLowerCase().includes(k)));
   if (d) fields.designation = d;
 
-  // company (all caps)
-  const c = lines.find(l => l === l.toUpperCase() && !l.includes("@") && !/www\.|http/i.test(l) && l.length > 2);
+  // company (first non-email/site/designation line in Title Case or CAPS)
+  const c = lines.find(l =>
+    !l.includes("@") &&
+    !/www\.|http/i.test(l) &&
+    l.length > 2 &&
+    (l === l.toUpperCase() || /^[A-Z][a-z]+/.test(l))
+  );
   if (c) fields.company = c;
 
-  // name
+  // name (first 2-word capitalized line that’s not company/designation)
   const n = lines.find(l => {
-    if (l === fields.company || l === fields.designation) return false;
+    if ([fields.company, fields.designation].includes(l)) return false;
     if (/@|www\.|http/.test(l)) return false;
-    const parts = l.split(/\s+/);
-    return parts.length === 2 && parts.every(p => /^[A-Z][a-zA-Z]+$/.test(p));
+    return /^[A-Z][a-z]+\s+[A-Z][a-z]+$/.test(l);
   });
   if (n) fields.name = n;
 
-  // address
-  const rev = [...lines].reverse();
-  const a = rev.find(l => l.length > 12 && /[,0-9]/.test(l) && !/@|www\.|http/.test(l));
-  if (a) fields.address = a;
+  // address (collect multiple lines near the bottom)
+  const addressLines = lines.slice(-3).filter(l => /[0-9,]/.test(l));
+  if (addressLines.length) fields.address = addressLines.join(", ");
 
   return fields;
 }
+
 
 export default function Home() {
   const { token, role } = useAuth();

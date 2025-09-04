@@ -676,7 +676,7 @@ async function startCamera() {
     alert("Camera access denied: " + err.message);
   }
 }
-
+// Stop camera
 function stopCamera() {
   if (videoRef.current && videoRef.current.srcObject) {
     let tracks = videoRef.current.srcObject.getTracks();
@@ -686,8 +686,7 @@ function stopCamera() {
   setStreaming(false);
 }
 
-
-// Capture high-resolution photo
+// Capture photo and run OCR
 function capturePhoto() {
   if (!videoRef.current || !canvasRef.current) return;
 
@@ -707,10 +706,13 @@ function capturePhoto() {
 
   // Convert to file for OCR upload
   fetch(dataUrl)
-    .then((res) => res.blob())
-    .then((blob) => {
+    .then(res => res.blob())
+    .then(blob => {
       const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
       setFile(file);
+
+      // ⬅️ Automatically run OCR after capture
+      handleExtract(file);
     });
 }
 

@@ -645,57 +645,53 @@ export default function Home() {
  
 
 // Start camera
-const startCamera = async () => {
+// Start camera (with back camera + high resolution)
+async function startCamera() {
   try {
-    let stream;
-    try {
-      // Try back camera first
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: "environment" } },
-      });
-    } catch {
-      // Fallback to front if not available
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-      });
-    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        facingMode: { ideal: "environment" } // back camera
+      },
+      audio: false
+    });
 
-    setStreaming(true);
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    }, 200);
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      setStreaming(true);
+    }
   } catch (err) {
     alert("Camera access denied: " + err.message);
   }
-};
+}
 
-// Stop camera
-const stopCamera = () => {
-  if (videoRef.current && videoRef.current.srcObject) {
-    videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-    videoRef.current.srcObject = null;
-  }
-  setStreaming(false);
-};
+// Capture high-resolution photo
+function capturePhoto() {
+  if (!videoRef.current || !canvasRef.current) return;
 
+  const video = videoRef.current;
+  const canvas = canvasRef.current;
 
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+  // Set canvas to same size as video stream
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const dataUrl = canvas.toDataURL("image/png");
-    setCapturedPreview(dataUrl);
-    stopCamera();
-    handleExtract(dataUrl);
-  };
+  // Convert to image
+  const dataUrl = canvas.toDataURL("image/jpeg", 1.0); // quality = 100%
+  setCapturedPreview(dataUrl);
+
+  // Convert to file for OCR upload
+  fetch(dataUrl)
+    .then((res) => res.blob())
+    .then((blob) => {
+      const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+      setFile(file);
+    });
+}
 
   // ---- Upload handler ----
   const onSubmitUpload = (e) => {

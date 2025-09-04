@@ -88,18 +88,17 @@ export default function Home() {
     }
   };
 
- // ---- OCR UPLOAD ----
-// Utility to compress/rescale image before sending (≤1MB)
+  // ---- OCR UPLOAD ----
+  // Utility to compress/rescale image before sending
 async function compressImage(file, maxWidth = 1000, quality = 0.8) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     const reader = new FileReader();
 
     reader.onload = (e) => { img.src = e.target.result; };
-    img.onerror = () => reject(new Error("Invalid image file"));
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const scale = Math.min(1, maxWidth / img.width);
+      const scale = Math.min(1, maxWidth / img.width); // only shrink if too large
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
 
@@ -108,10 +107,6 @@ async function compressImage(file, maxWidth = 1000, quality = 0.8) {
 
       canvas.toBlob(
         (blob) => {
-          if (!blob) return reject(new Error("Compression failed"));
-          if (blob.size > 1024 * 1024) {
-            return reject(new Error("Image exceeds 1MB after compression"));
-          }
           resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
         },
         "image/jpeg",
@@ -124,11 +119,12 @@ async function compressImage(file, maxWidth = 1000, quality = 0.8) {
 
 const handleExtract = async (chosenFile) => {
   try {
+    // ✅ compress before sending
     const compressedFile = await compressImage(chosenFile);
 
     const fd = new FormData();
     fd.append("image", compressedFile);
-    fd.append("detectOrientation", "true");
+    fd.append("detectOrientation", "true"); // keep orientation
 
     const data = await api("/api/ocr/scan", {
       method: "POST",
@@ -136,10 +132,6 @@ const handleExtract = async (chosenFile) => {
       token,
       isForm: true,
     });
-
-    if (data.error || data.message?.includes("OCR failed")) {
-      throw new Error("OCR failed: " + (data.error || "Unknown error"));
-    }
 
     setResult(data);
     setFormData({
@@ -152,8 +144,15 @@ const handleExtract = async (chosenFile) => {
   }
 };
 
-// ---- CAMERA ----
-const startCamera = async () => {
+
+  const onSubmitUpload = async (e) => {
+    e.preventDefault();
+    if (!file) return alert("Please select an image");
+    await handleExtract(file);
+  };
+
+  // ---- CAMERA ----
+  const startCamera = async () => {
   try {
     let stream;
     try {
@@ -162,7 +161,7 @@ const startCamera = async () => {
         audio: false,
       });
     } catch {
-      console.warn("Back camera not available, falling back to front camera");
+      console.warn("Back camera not available, using default/front camera");
       stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: false,
@@ -185,17 +184,29 @@ const startCamera = async () => {
   }
 };
 
-const capturePhoto = async () => {
+
+  const stopCamera = () => {
+    const v = videoRef.current;
+    if (v && v.srcObject) {
+      v.srcObject.getTracks().forEach((t) => t.stop());
+      v.srcObject = null;
+    }
+    setStreaming(false);
+  };
+
+  const capturePhoto = async () => {
   const v = videoRef.current,
     c = canvasRef.current;
   if (!v || !c) return;
 
+  // set resolution to at least 1280x720
   c.width = v.videoWidth || 1280;
   c.height = v.videoHeight || 720;
 
   const ctx = c.getContext("2d");
   ctx.drawImage(v, 0, 0, c.width, c.height);
 
+  // show preview
   setCapturedPreview(c.toDataURL("image/jpeg", 0.9));
 
   c.toBlob(
@@ -204,17 +215,17 @@ const capturePhoto = async () => {
         alert("Capture failed");
         return;
       }
+      console.log("Captured size (before compress):", blob.size, "bytes");
       const f = new File([blob], "capture.jpg", { type: "image/jpeg" });
 
-      try {
-        const compressed = await compressImage(f);
-        await handleExtract(compressed);
-      } catch (err) {
-        alert(err.message);
-      }
+      // ✅ compress like uploads
+      const compressed = await compressImage(f);
+
+      console.log("Captured size (after compress):", compressed.size, "bytes");
+      await handleExtract(compressed);
     },
     "image/jpeg",
-    0.9
+    0.9 // use JPEG with compression
   );
 };
 

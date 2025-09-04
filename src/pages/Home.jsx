@@ -156,12 +156,18 @@ const handleExtract = async (chosenFile) => {
   try {
     let stream;
     try {
+      // ✅ Try back camera first with resolution
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: "environment" } }, // back camera
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       });
-    } catch {
-      console.warn("Back camera not available, using default/front camera");
+    } catch (err) {
+      console.warn("Back camera not available, using default camera:", err.message);
+      // ✅ Fallback to any available camera
       stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: false,
@@ -170,10 +176,24 @@ const handleExtract = async (chosenFile) => {
 
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
+
+      // ✅ Important for iOS Safari (no black screen)
+      videoRef.current.setAttribute("playsinline", true);
+
+      // ✅ Ensure playback starts immediately
+      try {
+        await videoRef.current.play();
+      } catch (err) {
+        console.error("Video play failed:", err);
+      }
+
+      // Debugging: log dimensions
       videoRef.current.onloadedmetadata = () => {
-        videoRef.current.play().catch((err) => {
-          console.error("Video play error:", err);
-        });
+        console.log(
+          "Video dimensions:",
+          videoRef.current.videoWidth,
+          videoRef.current.videoHeight
+        );
       };
     }
 

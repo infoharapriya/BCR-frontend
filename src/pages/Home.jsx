@@ -642,27 +642,34 @@ export default function Home() {
   };
 
   // ---- Camera Controls ----
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
-      videoRef.current.srcObject = stream;
-      setStreaming(true);
-    } catch (err) {
-      alert("Camera access denied: " + err.message);
-    }
-  };
+ 
 
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setStreaming(false);
-    setCapturedPreview(null);
-  };
+// Start camera
+const startCamera = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    setStreaming(true);
+
+    // Wait for React to render <video>
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    }, 200);
+  } catch (err) {
+    alert("Camera access denied: " + err.message);
+  }
+};
+
+// Stop camera
+const stopCamera = () => {
+  if (videoRef.current && videoRef.current.srcObject) {
+    videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    videoRef.current.srcObject = null;
+  }
+  setStreaming(false);
+};
+
 
   const capturePhoto = () => {
     const video = videoRef.current;

@@ -182,67 +182,39 @@ export default function Home() {
   // };
 
   const startCamera = async () => {
-
   try {
-
     let stream;
-
     try {
-
       stream = await navigator.mediaDevices.getUserMedia({
-
         video: {
-
-          facingMode: { ideal: "environment" },
-
+          facingMode: { ideal: "environment" }, // back camera if possible
           width: { ideal: 1280 },
-
           height: { ideal: 720 },
-
         },
-
         audio: false,
-
       });
-
     } catch {
-
       stream = await navigator.mediaDevices.getUserMedia({ video: true });
-
     }
  
     if (videoRef.current) {
-
       videoRef.current.srcObject = stream;
-
       videoRef.current.setAttribute("playsinline", true);
-
       videoRef.current.muted = true;
  
       // ✅ wait for metadata before play
-
       videoRef.current.onloadedmetadata = () => {
-
         videoRef.current.play().catch((err) =>
-
           console.error("Video play error:", err)
-
         );
-
       };
-
     }
  
     setStreaming(true);
-
   } catch (err) {
-
     alert(`Camera error: ${err.message}`);
-
   }
-
 };
- 
 
   const stopCamera = () => {
     const v = videoRef.current;
@@ -437,19 +409,20 @@ export default function Home() {
                     </button>
                   ) : (
                     <div style={{ textAlign: "center" }}>
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        style={{
-                          width: "100%",
-                          maxWidth: "500px",
-                          height: "300px",
-                          objectFit: "cover",
-                          borderRadius: "8px",
-                          // background: "#f9f9f9",
-                        }}
-                      />
+                     <video
+  ref={videoRef}
+  autoPlay
+  playsInline
+  muted   // ✅ important for autoplay
+  style={{
+    width: "100%",
+    maxWidth: "500px",
+    height: "300px",
+    objectFit: "cover",
+    borderRadius: "8px",
+    background: "#000", // ✅ makes it clear when no stream
+  }}
+/>
                       <canvas ref={canvasRef} style={{ display: "none" }} />
 
                       <div

@@ -94,7 +94,9 @@ export default function Home() {
       const img = new Image();
       const reader = new FileReader();
 
-      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onload = (e) => {
+        img.src = e.target.result;
+      };
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const scale = Math.min(1, maxWidth / img.width);
@@ -149,82 +151,56 @@ export default function Home() {
   };
 
   // ---- CAMERA ----
-  // const startCamera = async () => {
-  //   try {
-  //     let stream;
-  //     try {
-  //       stream = await navigator.mediaDevices.getUserMedia({
-  //         video: {
-  //           facingMode: { ideal: "environment" },
-  //           width: { ideal: 1280 },
-  //           height: { ideal: 720 },
-  //         },
-  //         audio: false,
-  //       });
-  //     } catch {
-  //       stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  //     }
-
-  //     if (videoRef.current) {
-  //       videoRef.current.srcObject = stream;
-  //       videoRef.current.setAttribute("playsinline", true);
-  //       videoRef.current.muted = true;
-
-  //       await videoRef.current.play().catch((err) =>
-  //         console.error("Video play error:", err)
-  //       );
-  //     }
-
-  //     setStreaming(true);
-  //   } catch (err) {
-  //     alert(`Camera error: ${err.message}`);
-  //   }
-  // };
-
   const startCamera = async () => {
-  try {
-    let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-    } catch {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        videoRef.current.setAttribute("playsInline", true);
+
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current.play();
+          } catch (err) {
+            console.error("Play error:", err);
+          }
+        };
+      }
+
+      setStreaming(true);
+    } catch (err) {
+      alert(`Camera error: ${err.message}`);
     }
- 
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.muted = true;
-      videoRef.current.playsInline = true;
-      videoRef.current.autoplay = true;
- 
-      await videoRef.current.play().catch((err) => {
-        console.error("Video play error:", err);
-      });
-    }
- 
-    setStreaming(true);
-  } catch (err) {
-    alert(`Camera error: ${err.message}`);
-  }
-};
+  };
 
   const stopCamera = () => {
-    const v = videoRef.current;
-    if (v && v.srcObject) {
-      v.srcObject.getTracks().forEach((t) => t.stop());
-      v.srcObject = null;
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
     }
     setStreaming(false);
   };
 
   const capturePhoto = async () => {
-    const v = videoRef.current, c = canvasRef.current;
+    const v = videoRef.current,
+      c = canvasRef.current;
     if (!v || !c) return;
 
     c.width = v.videoWidth || 1280;
@@ -407,20 +383,19 @@ export default function Home() {
                     </button>
                   ) : (
                     <div style={{ textAlign: "center" }}>
-                     <video
-  ref={videoRef}
-  autoPlay
-  playsInline
-  muted   // ✅ important for autoplay
-  style={{
-    width: "100%",
-    maxWidth: "500px",
-    height: "300px",
-    objectFit: "cover",
-    borderRadius: "8px",
-    background: "#000", // ✅ makes it clear when no stream
-  }}
-/>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        style={{
+                          width: "100%",
+                          maxWidth: "500px",
+                          height: "300px",
+                          objectFit: "cover",
+                          borderRadius: "8px",
+                          background: "#000",
+                        }}
+                      />
                       <canvas ref={canvasRef} style={{ display: "none" }} />
 
                       <div

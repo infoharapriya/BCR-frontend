@@ -151,44 +151,44 @@ export default function Home() {
   };
 
   // ---- CAMERA ----
-  const startCamera = async () => {
+ const startCamera = async () => {
+  try {
+    let stream;
     try {
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-        videoRef.current.setAttribute("playsInline", true);
-
-        videoRef.current.onloadedmetadata = async () => {
-          try {
-            await videoRef.current.play();
-          } catch (err) {
-            console.error("Play error:", err);
-          }
-        };
-      }
-
-      setStreaming(true);
-    } catch (err) {
-      alert(`Camera error: ${err.message}`);
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+    } catch {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
     }
-  };
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.muted = true;
+      videoRef.current.setAttribute("playsInline", true);
+
+      // ✅ Wait until actual frames are available
+      videoRef.current.onloadeddata = async () => {
+        try {
+          await videoRef.current.play();
+          setStreaming(true); // move this here instead of before
+        } catch (err) {
+          console.error("Play error:", err);
+        }
+      };
+    }
+  } catch (err) {
+    alert(`Camera error: ${err.message}`);
+  }
+};
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -286,226 +286,225 @@ export default function Home() {
 
   const readyToUpload = selectedEvent && selectedType;
 
-  // ---- UI ----
-  return (
-    <div className="container">
-      <div className="card">
-        <h2 style={{ color: "var(--brand)", marginBottom: 10 }}>
-          OCR Business Card Extractor
-        </h2>
+// ---- UI ----
+return (
+  <div className="container">
+    <div className="card">
+      <h2 style={{ color: "var(--brand)", marginBottom: 10 }}>
+        OCR Business Card Extractor
+      </h2>
 
-        {/* Selectors */}
-        <div className="row">
-          <div className="col-6">
-            <label>
-              Event
-              <select
-                value={selectedEvent}
-                onChange={(e) => setSelectedEvent(e.target.value)}
-              >
-                <option value="">-- Select --</option>
-                {Array.isArray(events) &&
-                  events.map((ev) => (
-                    <option key={ev._id} value={ev.name}>
-                      {ev.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          </div>
-          <div className="col-6">
-            <label>
-              Type
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-              >
-                <option value="">-- Select --</option>
-                <option value="Customer">Customer</option>
-                <option value="Supplier">Supplier</option>
-              </select>
-            </label>
-          </div>
+      {/* Selectors */}
+      <div className="row">
+        <div className="col-6">
+          <label>
+            Event
+            <select
+              value={selectedEvent}
+              onChange={(e) => setSelectedEvent(e.target.value)}
+            >
+              <option value="">-- Select --</option>
+              {Array.isArray(events) &&
+                events.map((ev) => (
+                  <option key={ev._id} value={ev.name}>
+                    {ev.name}
+                  </option>
+                ))}
+            </select>
+          </label>
         </div>
+        <div className="col-6">
+          <label>
+            Type
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+            >
+              <option value="">-- Select --</option>
+              <option value="Customer">Customer</option>
+              <option value="Supplier">Supplier</option>
+            </select>
+          </label>
+        </div>
+      </div>
 
-        {/* Admin Controls */}
-        {role === "admin" && (
-          <div className="actions" style={{ marginTop: 6 }}>
-            <button className="btn success" onClick={addEvent}>
-              + Add Event
-            </button>
-            {selectedEvent && (
-              <>
-                <button className="btn" onClick={editEvent}>
-                  ✏️ Edit
+      {/* Admin Controls */}
+      {role === "admin" && (
+        <div className="actions" style={{ marginTop: 6 }}>
+          <button className="btn success" onClick={addEvent}>
+            + Add Event
+          </button>
+          {selectedEvent && (
+            <>
+              <button className="btn" onClick={editEvent}>
+                ✏️ Edit
+              </button>
+              <button className="btn danger" onClick={deleteEvent}>
+                🗑 Delete
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {!readyToUpload && (
+        <div className="notice info">
+          Select <b>Event</b> and <b>Type</b> to continue.
+        </div>
+      )}
+
+      {readyToUpload && (
+        <>
+          <div className="row" style={{ marginTop: 10 }}>
+            {/* Upload */}
+            <div className="col-6">
+              <form onSubmit={onSubmitUpload}>
+                <label>
+                  Upload Image
+                  <input
+                    type="file"
+                    className="input"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  />
+                </label>
+                <button className="btn" type="submit">
+                  Extract
                 </button>
-                <button className="btn danger" onClick={deleteEvent}>
-                  🗑 Delete
-                </button>
-              </>
-            )}
-          </div>
-        )}
+              </form>
+            </div>
 
-        {!readyToUpload && (
-          <div className="notice info">
-            Select <b>Event</b> and <b>Type</b> to continue.
-          </div>
-        )}
+            {/* Camera Section */}
+            <div className="col-6">
+              {streaming ? (
+                <div style={{ textAlign: "center" }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    style={{
+                      width: "100%",
+                      maxWidth: "500px",
+                      height: "300px",
+                      objectFit: "cover",
+                      borderRadius: "8px",
+                      background: "#000", // fallback
+                    }}
+                  />
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
 
-        {readyToUpload && (
-          <>
-            <div className="row" style={{ marginTop: 10 }}>
-              {/* Upload */}
-              <div className="col-6">
-                <form onSubmit={onSubmitUpload}>
-                  <label>
-                    Upload Image
-                    <input
-                      type="file"
-                      className="input"
-                      accept="image/*"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    />
-                  </label>
-                  <button className="btn" type="submit">
-                    Extract
-                  </button>
-                </form>
-              </div>
-
-              {/* Camera Section */}
-              <div className="col-6">
-                <div className="camera-box" style={{ marginTop: 10 }}>
-                  {!streaming ? (
-                    <button className="btn" onClick={startCamera}>
-                      📷 Start Scan
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "flex",
+                      gap: "10px",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <button className="btn" onClick={capturePhoto}>
+                      📸 Extract
                     </button>
-                  ) : (
-                    <div style={{ textAlign: "center" }}>
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
+                    <button className="btn secondary" onClick={stopCamera}>
+                      Stop Scan
+                    </button>
+                  </div>
+
+                  {capturedPreview && (
+                    <div style={{ marginTop: 12 }}>
+                      <p>Captured Image:</p>
+                      <img
+                        src={capturedPreview}
+                        alt="Captured"
                         style={{
                           width: "100%",
                           maxWidth: "500px",
-                          height: "300px",
-                          objectFit: "cover",
-                          borderRadius: "8px",
-                          // background: "#000",
+                          border: "1px solid #ddd",
+                          borderRadius: "6px",
                         }}
                       />
-                      <canvas ref={canvasRef} style={{ display: "none" }} />
-
-                      <div
-                        style={{
-                          marginTop: 10,
-                          display: "flex",
-                          gap: "10px",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <button className="btn" onClick={capturePhoto}>
-                          📸 Extract
-                        </button>
-                        <button className="btn secondary" onClick={stopCamera}>
-                          Stop Scan
-                        </button>
-                      </div>
-
-                      {capturedPreview && (
-                        <div style={{ marginTop: 12 }}>
-                          <p>Captured Image:</p>
-                          <img
-                            src={capturedPreview}
-                            alt="Captured"
-                            style={{
-                              width: "100%",
-                              maxWidth: "500px",
-                              border: "1px solid #ddd",
-                              borderRadius: "6px",
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
-              </div>
+              ) : (
+                <button className="btn" onClick={startCamera}>
+                  📷 Start Scan
+                </button>
+              )}
             </div>
-
-            {/* QR Scanner */}
-            <div style={{ marginTop: 16 }}>
-              <QRScanner onResult={onQRResult} />
-            </div>
-          </>
-        )}
-
-        {msg && (
-          <div
-            className={`notice ${msg.includes("fail") ? "error" : "success"}`}
-          >
-            {msg}
           </div>
-        )}
 
-        {/* Editable form */}
-        {formData && (
-          <div className="row" style={{ marginTop: 16 }}>
-            <div className="col-12">
-              <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
-            </div>
-            {[
-              ["Name", "name"],
-              ["Designation", "designation"],
-              ["Company", "company"],
-              ["Number", "number"],
-              ["Email", "email"],
-              ["Website", "site"],
-            ].map(([label, key]) => (
-              <div className="col-6" key={key}>
-                <label>
-                  {label}
-                  <input
-                    className="input"
-                    value={formData[key] || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [key]: e.target.value })
-                    }
-                  />
-                </label>
-              </div>
-            ))}
-            <div className="col-12">
+          {/* QR Scanner */}
+          <div style={{ marginTop: 16 }}>
+            <QRScanner onResult={onQRResult} />
+          </div>
+        </>
+      )}
+
+      {msg && (
+        <div
+          className={`notice ${msg.includes("fail") ? "error" : "success"}`}
+        >
+          {msg}
+        </div>
+      )}
+
+      {/* Editable form */}
+      {formData && (
+        <div className="row" style={{ marginTop: 16 }}>
+          <div className="col-12">
+            <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
+          </div>
+          {[
+            ["Name", "name"],
+            ["Designation", "designation"],
+            ["Company", "company"],
+            ["Number", "number"],
+            ["Email", "email"],
+            ["Website", "site"],
+          ].map(([label, key]) => (
+            <div className="col-6" key={key}>
               <label>
-                Address
-                <textarea
+                {label}
+                <input
                   className="input"
-                  rows="3"
-                  value={formData.address || ""}
+                  value={formData[key] || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
+                    setFormData({ ...formData, [key]: e.target.value })
                   }
                 />
               </label>
             </div>
-            <div className="col-12 actions">
-              <button className="btn" onClick={handleSave}>
-                Save
-              </button>
-            </div>
+          ))}
+          <div className="col-12">
+            <label>
+              Address
+              <textarea
+                className="input"
+                rows="3"
+                value={formData.address || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+              />
+            </label>
           </div>
-        )}
+          <div className="col-12 actions">
+            <button className="btn" onClick={handleSave}>
+              Save
+            </button>
+          </div>
+        </div>
+      )}
 
-        {/* Raw OCR */}
-        {result?.raw && (
-          <div style={{ marginTop: 16 }}>
-            <h4>Raw Output</h4>
-            <textarea className="input" readOnly rows="6" value={result.raw} />
-          </div>
-        )}
-      </div>
+      {/* Raw OCR */}
+      {result?.raw && (
+        <div style={{ marginTop: 16 }}>
+          <h4>Raw Output</h4>
+          <textarea className="input" readOnly rows="6" value={result.raw} />
+        </div>
+      )}
     </div>
-  );
+  </div>
+  
+); // ✅ only this closing, no extra bracket
 }

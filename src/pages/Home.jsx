@@ -509,6 +509,7 @@
 //     </div>
 //   );
 // }
+
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../utils/api";
@@ -580,6 +581,19 @@ export default function Home() {
   const [streaming, setStreaming] = useState(false);
   const [capturedPreview, setCapturedPreview] = useState(null);
 
+  // ---- Fetch Events on Mount ----
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await api("/api/events", { token }); 
+        setEvents(Array.isArray(data) ? data : data.events || []);
+      } catch (e) {
+        console.error("Failed to fetch events:", e);
+      }
+    };
+    fetchEvents();
+  }, [token]);
+
   // ---- OCR ----
   const handleExtract = async (chosenFile) => {
     try {
@@ -631,7 +645,7 @@ export default function Home() {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, // back camera for mobile
+        video: { facingMode: "environment" },
         audio: false,
       });
       videoRef.current.srcObject = stream;
@@ -797,7 +811,7 @@ export default function Home() {
                         height: "300px",
                         objectFit: "cover",
                         borderRadius: "8px",
-                        background: "#000",
+                        // background: "white",
                       }}
                     />
                     <canvas ref={canvasRef} style={{ display: "none" }} />

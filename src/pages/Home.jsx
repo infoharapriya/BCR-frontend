@@ -393,7 +393,7 @@ export default function Home() {
                           height: "300px",
                           objectFit: "cover",
                           borderRadius: "8px",
-                          background: "#000",
+                          // background: "#000",
                         }}
                       />
                       <canvas ref={canvasRef} style={{ display: "none" }} />

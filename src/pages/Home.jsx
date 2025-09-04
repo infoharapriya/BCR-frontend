@@ -384,7 +384,7 @@ export default function Home() {
                           height: "300px",
                           objectFit: "cover",
                           borderRadius: "8px",
-                          background: "#f9f9f9",
+                          // background: "#f9f9f9",
                         }}
                       />
                       <canvas ref={canvasRef} style={{ display: "none" }} />

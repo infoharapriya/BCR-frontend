@@ -489,358 +489,8 @@
 
 
 
-import { useRef, useState, useEffect } from "react";
-import Tesseract from "tesseract.js";   // ✅ OCR library
-import QRScanner from "./QRScanner";
-import { api } from "../utils/api";
-import { useAuth } from "../context/AuthContext";
-
-export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
-  const { token } = useAuth();
-  const [file, setFile] = useState(null);
-  const [result, setResult] = useState(null);
-  const [formData, setFormData] = useState(null);
-  const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState(false);   // ✅ added missing state
-
-  // camera
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [streaming, setStreaming] = useState(false);
-
-  const showMsg = (text, timeout = 2500) => {
-    setMsg(text);
-    setTimeout(() => setMsg(""), timeout);
-  };
-
-  // ---- IMAGE COMPRESSION ----
-  async function compressImage(file, maxWidth = 1000, quality = 0.7) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const reader = new FileReader();
-
-      reader.onload = (e) => (img.src = e.target.result);
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const scale = Math.min(1, maxWidth / img.width);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob(
-          (blob) =>
-            resolve(new File([blob], "compressed.jpg", { type: "image/jpeg" })),
-          "image/jpeg",
-          quality
-        );
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // ---- OCR (upload) ----
-  const handleExtract = async (chosenFile) => {
-    try {
-      const compressedFile = await compressImage(chosenFile);
-      const fd = new FormData();
-      fd.append("image", compressedFile);
-
-      const data = await api("/api/ocr/scan", {
-        method: "POST",
-        body: fd,
-        token,
-        isForm: true,
-      });
-
-      setResult(data);
-      setFormData({
-        ...data.fields,
-        event: selectedEvent,
-        type: selectedType,
-      });
-    } catch (e) {
-      alert(e.message);
-    }
-  };
-
-  const onSubmitUpload = async (e) => {
-    e.preventDefault();
-    if (!file) return alert("Please select an image");
-    await handleExtract(file);
-  };
-
-  // ---- CAMERA ----
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsInline", "true");
-        videoRef.current.setAttribute("muted", "true");
-        videoRef.current.onloadedmetadata = async () => {
-          try {
-            await videoRef.current.play();
-            setStreaming(true);
-            console.log("📷 Camera streaming");
-          } catch (err) {
-            console.error("Play error:", err);
-          }
-        };
-      }
-    } catch (err) {
-      alert(`Camera error: ${err.message}`);
-      console.error("Camera error", err);
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-      setStreaming(false);
-    }
-  };
-
-  // ---- Capture + OCR ----
-  const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    setLoading(true);
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    ctx.drawImage(videoRef.current, 0, 0);
-
-    try {
-      const { data: { text } } = await Tesseract.recognize(canvas, "eng");
-      console.log("📝 OCR Text:", text);
-
-      setResult({ raw: text, fields: {} });   // ✅ replaced onResult
-      setFormData({ event: selectedEvent, type: selectedType });
-    } catch (err) {
-      console.error("OCR error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
-  // ---- SAVE ----
-  const handleSave = async () => {
-    try {
-      if (!formData) return alert("No data to save");
-      const payload = {
-        ...formData,
-        raw: result?.raw || "",
-        event: selectedEvent,
-        type: selectedType,
-      };
-
-      await api("/api/ocr/save", { method: "POST", token, body: payload });
-
-      showMsg("Saved!");
-      setResult(null);
-      setFormData(null);
-      setFile(null);
-      if (onSaved) onSaved();
-    } catch (e) {
-      showMsg("Save failed: " + e.message, 3500);
-    }
-  };
-
-  // ---- QR RESULT ----
-  const onQRResult = (decodedText) => {
-    let f = {};
-    try {
-      const j = JSON.parse(decodedText);
-      if (j && typeof j === "object") f = j;
-    } catch {}
-
-    if (/BEGIN:VCARD/i.test(decodedText)) {
-      decodedText.split(/\r?\n/).forEach((line) => {
-        const [key, value] = line.split(/:(.+)/);
-        if (!value) return;
-        const k = key.toLowerCase();
-        if (k.includes("fn")) f.name = value;
-        if (k.includes("org")) f.company = value;
-        if (k.includes("title")) f.designation = value;
-        if (k === "email") f.email = value;
-        if (k === "tel") f.phone = value;
-        if (k === "url") f.site = value;
-        if (k === "adr") f.address = value.replace(/;/g, " ");
-      });
-    }
-
-    if (!Object.keys(f).length && /^https?:\/\//i.test(decodedText)) {
-      f.site = decodedText;
-    }
-
-    setResult({ raw: decodedText, fields: f });
-    setFormData({ ...f, event: selectedEvent, type: selectedType });
-    showMsg("QR decoded.");
-  };
-
-  // ---- UI ----
-  return (
-    <div>
-      {/* Upload */}
-      <div className="row" style={{ marginTop: 10 }}>
-        <div className="col-6">
-          <form onSubmit={onSubmitUpload}>
-            <label>
-              Upload Image
-              <input
-                type="file"
-                className="input"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </label>
-            <button className="btn" type="submit">
-              Extract
-            </button>
-          </form>
-        </div>
-
-        {/* Camera */}
-        <div className="space-y-4">
-          {!streaming ? (
-            <button
-              onClick={startCamera}
-              className="px-4 py-2 bg-green-600 text-white rounded"
-            >
-              Start Scan
-            </button>
-          ) : (
-            <button
-              onClick={stopCamera}
-              className="px-4 py-2 bg-red-600 text-white rounded"
-            >
-              Stop Scan
-            </button>
-          )}
-
-          <div className="relative inline-block w-full max-w-md">
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full rounded-lg bg-black"
-              style={{ height: "300px", objectFit: "cover" }}
-            />
-
-            {streaming && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative w-3/4 h-2/4 border-4 border-white rounded-md">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-scan" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-
-          {streaming && (
-            <button
-              onClick={capturePhoto}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "📸 Extract"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* QR Scanner */}
-      <div style={{ marginTop: 16 }}>
-        <QRScanner onResult={onQRResult} />
-      </div>
-
-      {/* Notifications */}
-      {msg && (
-        <div
-          className={`notice ${msg.includes("fail") ? "error" : "success"}`}
-        >
-          {msg}
-        </div>
-      )}
-
-      {/* Editable form */}
-      {formData && (
-        <div className="row" style={{ marginTop: 16 }}>
-          <div className="col-12">
-            <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
-          </div>
-          {[
-            ["Name", "name"],
-            ["Designation", "designation"],
-            ["Company", "company"],
-            ["Number", "number"],
-            ["Email", "email"],
-            ["Website", "site"],
-          ].map(([label, key]) => (
-            <div className="col-6" key={key}>
-              <label>
-                {label}
-                <input
-                  className="input"
-                  value={formData[key] || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [key]: e.target.value })
-                  }
-                />
-              </label>
-            </div>
-          ))}
-          <div className="col-12">
-            <label>
-              Address
-              <textarea
-                className="input"
-                rows="3"
-                value={formData.address || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-              />
-            </label>
-          </div>
-          <div className="col-12 actions">
-            <button className="btn" onClick={handleSave}>
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Raw OCR */}
-      {result?.raw && (
-        <div style={{ marginTop: 16 }}>
-          <h4>Raw Output</h4>
-          <textarea className="input" readOnly rows="6" value={result.raw} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-
-
 // import { useRef, useState, useEffect } from "react";
-// import Tesseract from "tesseract.js";
+// import Tesseract from "tesseract.js";   // ✅ OCR library
 // import QRScanner from "./QRScanner";
 // import { api } from "../utils/api";
 // import { useAuth } from "../context/AuthContext";
@@ -851,8 +501,9 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //   const [result, setResult] = useState(null);
 //   const [formData, setFormData] = useState(null);
 //   const [msg, setMsg] = useState("");
-//   const [loading, setLoading] = useState(false);
+//   const [loading, setLoading] = useState(false);   // ✅ added missing state
 
+//   // camera
 //   const videoRef = useRef(null);
 //   const canvasRef = useRef(null);
 //   const [streaming, setStreaming] = useState(false);
@@ -862,11 +513,12 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //     setTimeout(() => setMsg(""), timeout);
 //   };
 
-//   // ---- IMAGE COMPRESSION ---- (higher quality now)
-//   async function compressImage(file, maxWidth = 2000, quality = 0.9) {
+//   // ---- IMAGE COMPRESSION ----
+//   async function compressImage(file, maxWidth = 1000, quality = 0.7) {
 //     return new Promise((resolve) => {
 //       const img = new Image();
 //       const reader = new FileReader();
+
 //       reader.onload = (e) => (img.src = e.target.result);
 //       img.onload = () => {
 //         const canvas = document.createElement("canvas");
@@ -889,55 +541,29 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //   }
 
 //   // ---- OCR (upload) ----
-// //   const handleExtract = async (chosenFile) => {
-// //     try {
-// //       const compressedFile = await compressImage(chosenFile);
-// //       const fd = new FormData();
-// //       fd.append("image", compressedFile);
+//   const handleExtract = async (chosenFile) => {
+//     try {
+//       const compressedFile = await compressImage(chosenFile);
+//       const fd = new FormData();
+//       fd.append("image", compressedFile);
 
-// //       const data = await api("/api/ocr/scan", {
-// //         method: "POST",
-// //         body: fd,
-// //         token,
-// //         isForm: true,
-// //       });
+//       const data = await api("/api/ocr/scan", {
+//         method: "POST",
+//         body: fd,
+//         token,
+//         isForm: true,
+//       });
 
-// //       // ✅ Save both raw + fields into result and formData
-// //       setResult(data);
-// //       setFormData({
-// //         ...data.fields,
-// //         event: selectedEvent,
-// //         type: selectedType,
-// //       });
-// //     } catch (e) {
-// //       alert(e.message);
-// //     }
-// //   };
-
-
-// const handleExtract = async (chosenFile) => {
-//   try {
-//     const compressedFile = await compressImage(chosenFile);
-//     const fd = new FormData();
-//     fd.append("image", compressedFile);
-
-//     const data = await api("/api/ocr/scan", {
-//       method: "POST",
-//       body: fd,
-//       token,
-//       isForm: true,
-//     });
-
-//     setResult(data);
-//     setFormData({
-//       ...data.fields,        // 👈 auto-filled
-//       event: selectedEvent,
-//       type: selectedType,
-//     });
-//   } catch (e) {
-//     alert(e.message);
-//   }
-// };
+//       setResult(data);
+//       setFormData({
+//         ...data.fields,
+//         event: selectedEvent,
+//         type: selectedType,
+//       });
+//     } catch (e) {
+//       alert(e.message);
+//     }
+//   };
 
 //   const onSubmitUpload = async (e) => {
 //     e.preventDefault();
@@ -949,12 +575,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //   const startCamera = async () => {
 //     try {
 //       const stream = await navigator.mediaDevices.getUserMedia({
-//         video: {
-//           facingMode: { ideal: "environment" },
-//           width: { ideal: 1920 },
-//           height: { ideal: 1080 },
-//           aspectRatio: { ideal: 1.777 }, // widescreen
-//         },
+//         video: { facingMode: { ideal: "environment" } },
 //         audio: false,
 //       });
 //       if (videoRef.current) {
@@ -965,7 +586,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //           try {
 //             await videoRef.current.play();
 //             setStreaming(true);
-//             console.log("📷 Camera streaming at high resolution");
+//             console.log("📷 Camera streaming");
 //           } catch (err) {
 //             console.error("Play error:", err);
 //           }
@@ -1001,8 +622,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //       const { data: { text } } = await Tesseract.recognize(canvas, "eng");
 //       console.log("📝 OCR Text:", text);
 
-//       // ✅ Update result + formData properly
-//       setResult({ raw: text, fields: {} });
+//       setResult({ raw: text, fields: {} });   // ✅ replaced onResult
 //       setFormData({ event: selectedEvent, type: selectedType });
 //     } catch (err) {
 //       console.error("OCR error:", err);
@@ -1011,7 +631,9 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //     }
 //   };
 
-//   useEffect(() => () => stopCamera(), []);
+//   useEffect(() => {
+//     return () => stopCamera();
+//   }, []);
 
 //   // ---- SAVE ----
 //   const handleSave = async () => {
@@ -1050,10 +672,10 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //         if (!value) return;
 //         const k = key.toLowerCase();
 //         if (k.includes("fn")) f.name = value;
-//         if (k.includes("title")) f.designation = value;
 //         if (k.includes("org")) f.company = value;
-//         if (k === "tel") f.number = value;
+//         if (k.includes("title")) f.designation = value;
 //         if (k === "email") f.email = value;
+//         if (k === "tel") f.phone = value;
 //         if (k === "url") f.site = value;
 //         if (k === "adr") f.address = value.replace(/;/g, " ");
 //       });
@@ -1063,12 +685,12 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //       f.site = decodedText;
 //     }
 
-//     // ✅ Fill form fields when QR is decoded
 //     setResult({ raw: decodedText, fields: f });
 //     setFormData({ ...f, event: selectedEvent, type: selectedType });
 //     showMsg("QR decoded.");
 //   };
 
+//   // ---- UI ----
 //   return (
 //     <div>
 //       {/* Upload */}
@@ -1117,6 +739,14 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //               className="w-full rounded-lg bg-black"
 //               style={{ height: "300px", objectFit: "cover" }}
 //             />
+
+//             {streaming && (
+//               <div className="absolute inset-0 flex items-center justify-center">
+//                 <div className="relative w-3/4 h-2/4 border-4 border-white rounded-md">
+//                   <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-scan" />
+//                 </div>
+//               </div>
+//             )}
 //           </div>
 
 //           <canvas ref={canvasRef} style={{ display: "none" }} />
@@ -1205,3 +835,373 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 //     </div>
 //   );
 // }
+
+
+
+
+import { useRef, useState, useEffect } from "react";
+import Tesseract from "tesseract.js";
+import QRScanner from "./QRScanner";
+import { api } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
+
+export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
+  const { token } = useAuth();
+  const [file, setFile] = useState(null);
+  const [result, setResult] = useState(null);
+  const [formData, setFormData] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [streaming, setStreaming] = useState(false);
+
+  const showMsg = (text, timeout = 2500) => {
+    setMsg(text);
+    setTimeout(() => setMsg(""), timeout);
+  };
+
+  // ---- IMAGE COMPRESSION ---- (higher quality now)
+  async function compressImage(file, maxWidth = 2000, quality = 0.9) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => (img.src = e.target.result);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(
+          (blob) =>
+            resolve(new File([blob], "compressed.jpg", { type: "image/jpeg" })),
+          "image/jpeg",
+          quality
+        );
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---- OCR (upload) ----
+//   const handleExtract = async (chosenFile) => {
+//     try {
+//       const compressedFile = await compressImage(chosenFile);
+//       const fd = new FormData();
+//       fd.append("image", compressedFile);
+
+//       const data = await api("/api/ocr/scan", {
+//         method: "POST",
+//         body: fd,
+//         token,
+//         isForm: true,
+//       });
+
+//       // ✅ Save both raw + fields into result and formData
+//       setResult(data);
+//       setFormData({
+//         ...data.fields,
+//         event: selectedEvent,
+//         type: selectedType,
+//       });
+//     } catch (e) {
+//       alert(e.message);
+//     }
+//   };
+
+
+const handleExtract = async (chosenFile) => {
+  try {
+    const compressedFile = await compressImage(chosenFile);
+    const fd = new FormData();
+    fd.append("image", compressedFile);
+
+    const data = await api("/api/ocr/scan", {
+      method: "POST",
+      body: fd,
+      token,
+      isForm: true,
+    });
+
+    setResult(data);
+    setFormData({
+      ...data.fields,        // 👈 auto-filled
+      event: selectedEvent,
+      type: selectedType,
+    });
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+  const onSubmitUpload = async (e) => {
+    e.preventDefault();
+    if (!file) return alert("Please select an image");
+    await handleExtract(file);
+  };
+
+  // ---- CAMERA ----
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          aspectRatio: { ideal: 1.777 }, // widescreen
+        },
+        audio: false,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsInline", "true");
+        videoRef.current.setAttribute("muted", "true");
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current.play();
+            setStreaming(true);
+            console.log("📷 Camera streaming at high resolution");
+          } catch (err) {
+            console.error("Play error:", err);
+          }
+        };
+      }
+    } catch (err) {
+      alert(`Camera error: ${err.message}`);
+      console.error("Camera error", err);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+      setStreaming(false);
+    }
+  };
+
+  // ---- Capture + OCR ----
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    setLoading(true);
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    try {
+      const { data: { text } } = await Tesseract.recognize(canvas, "eng");
+      console.log("📝 OCR Text:", text);
+
+      // ✅ Update result + formData properly
+      setResult({ raw: text, fields: {} });
+      setFormData({ event: selectedEvent, type: selectedType });
+    } catch (err) {
+      console.error("OCR error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => () => stopCamera(), []);
+
+  // ---- SAVE ----
+  const handleSave = async () => {
+    try {
+      if (!formData) return alert("No data to save");
+      const payload = {
+        ...formData,
+        raw: result?.raw || "",
+        event: selectedEvent,
+        type: selectedType,
+      };
+
+      await api("/api/ocr/save", { method: "POST", token, body: payload });
+
+      showMsg("Saved!");
+      setResult(null);
+      setFormData(null);
+      setFile(null);
+      if (onSaved) onSaved();
+    } catch (e) {
+      showMsg("Save failed: " + e.message, 3500);
+    }
+  };
+
+  // ---- QR RESULT ----
+  const onQRResult = (decodedText) => {
+    let f = {};
+    try {
+      const j = JSON.parse(decodedText);
+      if (j && typeof j === "object") f = j;
+    } catch {}
+
+    if (/BEGIN:VCARD/i.test(decodedText)) {
+      decodedText.split(/\r?\n/).forEach((line) => {
+        const [key, value] = line.split(/:(.+)/);
+        if (!value) return;
+        const k = key.toLowerCase();
+        if (k.includes("fn")) f.name = value;
+        if (k.includes("title")) f.designation = value;
+        if (k.includes("org")) f.company = value;
+        if (k === "tel") f.number = value;
+        if (k === "email") f.email = value;
+        if (k === "url") f.site = value;
+        if (k === "adr") f.address = value.replace(/;/g, " ");
+      });
+    }
+
+    if (!Object.keys(f).length && /^https?:\/\//i.test(decodedText)) {
+      f.site = decodedText;
+    }
+
+    // ✅ Fill form fields when QR is decoded
+    setResult({ raw: decodedText, fields: f });
+    setFormData({ ...f, event: selectedEvent, type: selectedType });
+    showMsg("QR decoded.");
+  };
+
+  return (
+    <div>
+      {/* Upload */}
+      <div className="row" style={{ marginTop: 10 }}>
+        <div className="col-6">
+          <form onSubmit={onSubmitUpload}>
+            <label>
+              Upload Image
+              <input
+                type="file"
+                className="input"
+                accept="image/*"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </label>
+            <button className="btn" type="submit">
+              Extract
+            </button>
+          </form>
+        </div>
+
+        {/* Camera */}
+        <div className="space-y-4">
+          {!streaming ? (
+            <button
+              onClick={startCamera}
+              className="px-4 py-2 bg-green-600 text-white rounded"
+            >
+              Start Scan
+            </button>
+          ) : (
+            <button
+              onClick={stopCamera}
+              className="px-4 py-2 bg-red-600 text-white rounded"
+            >
+              Stop Scan
+            </button>
+          )}
+
+          <div className="relative inline-block w-full max-w-md">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full rounded-lg bg-black"
+              style={{ height: "300px", objectFit: "cover" }}
+            />
+          </div>
+
+          <canvas ref={canvasRef} style={{ display: "none" }} />
+
+          {streaming && (
+            <button
+              onClick={capturePhoto}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "📸 Extract"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* QR Scanner */}
+      <div style={{ marginTop: 16 }}>
+        <QRScanner onResult={onQRResult} />
+      </div>
+
+      {/* Notifications */}
+      {msg && (
+        <div
+          className={`notice ${msg.includes("fail") ? "error" : "success"}`}
+        >
+          {msg}
+        </div>
+      )}
+
+      {/* Editable form */}
+      {formData && (
+        <div className="row" style={{ marginTop: 16 }}>
+          <div className="col-12">
+            <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
+          </div>
+          {[
+            ["Name", "name"],
+            ["Designation", "designation"],
+            ["Company", "company"],
+            ["Number", "number"],
+            ["Email", "email"],
+            ["Website", "site"],
+          ].map(([label, key]) => (
+            <div className="col-6" key={key}>
+              <label>
+                {label}
+                <input
+                  className="input"
+                  value={formData[key] || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [key]: e.target.value })
+                  }
+                />
+              </label>
+            </div>
+          ))}
+          <div className="col-12">
+            <label>
+              Address
+              <textarea
+                className="input"
+                rows="3"
+                value={formData.address || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+              />
+            </label>
+          </div>
+          <div className="col-12 actions">
+            <button className="btn" onClick={handleSave}>
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Raw OCR */}
+      {result?.raw && (
+        <div style={{ marginTop: 16 }}>
+          <h4>Raw Output</h4>
+          <textarea className="input" readOnly rows="6" value={result.raw} />
+        </div>
+      )}
+    </div>
+  );
+}

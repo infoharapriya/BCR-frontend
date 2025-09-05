@@ -675,7 +675,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
         if (k.includes("org")) f.company = value;
         if (k.includes("title")) f.designation = value;
         if (k === "email") f.email = value;
-        if (k === "tel") f.number = value;
+        if (k === "tel") f.phone = value;
         if (k === "url") f.site = value;
         if (k === "adr") f.address = value.replace(/;/g, " ");
       });

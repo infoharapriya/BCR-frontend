@@ -74,7 +74,7 @@ export default function Home() {
   };
 
   const deleteEvent = async () => {
-    const ev = events.find((e) => e.name === selectedEvent);
+    const ev = events.find((e) => e._id === selectedEvent);
     if (!ev) return alert("No event selected");
     if (!window.confirm(`Delete event "${ev.name}"?`)) return;
 
@@ -306,7 +306,7 @@ export default function Home() {
                 <option value="">-- Select --</option>
                 {Array.isArray(events) &&
                   events.map((ev) => (
-                    <option key={ev._id} value={ev.name}>
+                    <option key={ev._id} value={ev._id}>
                       {ev.name}
                     </option>
                   ))}

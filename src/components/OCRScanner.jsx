@@ -887,30 +887,55 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   }
 
   // ---- OCR (upload) ----
-  const handleExtract = async (chosenFile) => {
-    try {
-      const compressedFile = await compressImage(chosenFile);
-      const fd = new FormData();
-      fd.append("image", compressedFile);
+//   const handleExtract = async (chosenFile) => {
+//     try {
+//       const compressedFile = await compressImage(chosenFile);
+//       const fd = new FormData();
+//       fd.append("image", compressedFile);
 
-      const data = await api("/api/ocr/scan", {
-        method: "POST",
-        body: fd,
-        token,
-        isForm: true,
-      });
+//       const data = await api("/api/ocr/scan", {
+//         method: "POST",
+//         body: fd,
+//         token,
+//         isForm: true,
+//       });
 
-      // ✅ Save both raw + fields into result and formData
-      setResult(data);
-      setFormData({
-        ...data.fields,
-        event: selectedEvent,
-        type: selectedType,
-      });
-    } catch (e) {
-      alert(e.message);
-    }
-  };
+//       // ✅ Save both raw + fields into result and formData
+//       setResult(data);
+//       setFormData({
+//         ...data.fields,
+//         event: selectedEvent,
+//         type: selectedType,
+//       });
+//     } catch (e) {
+//       alert(e.message);
+//     }
+//   };
+
+
+const handleExtract = async (chosenFile) => {
+  try {
+    const compressedFile = await compressImage(chosenFile);
+    const fd = new FormData();
+    fd.append("image", compressedFile);
+
+    const data = await api("/api/ocr/scan", {
+      method: "POST",
+      body: fd,
+      token,
+      isForm: true,
+    });
+
+    setResult(data);
+    setFormData({
+      ...data.fields,        // 👈 auto-filled
+      event: selectedEvent,
+      type: selectedType,
+    });
+  } catch (e) {
+    alert(e.message);
+  }
+};
 
   const onSubmitUpload = async (e) => {
     e.preventDefault();
@@ -1023,10 +1048,10 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
         if (!value) return;
         const k = key.toLowerCase();
         if (k.includes("fn")) f.name = value;
-        if (k.includes("org")) f.company = value;
         if (k.includes("title")) f.designation = value;
-        if (k === "email") f.email = value;
+        if (k.includes("org")) f.company = value;
         if (k === "tel") f.number = value;
+        if (k === "email") f.email = value;
         if (k === "url") f.site = value;
         if (k === "adr") f.address = value.replace(/;/g, " ");
       });

@@ -1464,7 +1464,6 @@
 //   );
 // }
 
-
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../utils/api";
@@ -1479,31 +1478,37 @@ export default function Home() {
   const [formData, setFormData] = useState({});
   const [msg, setMsg] = useState("");
 
-  // Fetch events
+  // ✅ Fetch events with proper response handling
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const res = await api.get("/events", { headers: { Authorization: `Bearer ${token}` } });
-        setEvents(res.data);
+
+        // Check if backend sends { events: [...] } or just [...]
+        if (Array.isArray(res.data)) {
+          setEvents(res.data);
+        } else {
+          setEvents(res.data.events || []);
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching events:", err);
       }
     };
     fetchEvents();
   }, [token]);
 
-  // Handle save
+  // ✅ Handle save
   const handleSave = async () => {
     try {
       const res = await api.post(
-        "/ocr-results",
+        "/ocr/save", // match your backend route
         { ...formData, event: selectedEvent, type: selectedType },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMsg("✅ Saved successfully!");
       console.log("Saved:", res.data);
     } catch (err) {
-      console.error(err);
+      console.error("Save failed:", err);
       setMsg("❌ Save failed");
     }
   };
@@ -1512,14 +1517,25 @@ export default function Home() {
     <div className="p-6 space-y-6">
       <h2 className="text-2xl font-bold">Event Management + OCR</h2>
 
+      {/* Event + Type selection */}
       <div className="flex gap-4">
-        <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} className="border p-2 rounded">
+        <select
+          value={selectedEvent}
+          onChange={(e) => setSelectedEvent(e.target.value)}
+          className="border p-2 rounded"
+        >
           <option value="">Select Event</option>
           {events.map((ev) => (
-            <option key={ev._id} value={ev._id}>{ev.name}</option>
+            <option key={ev._id} value={ev._id}>
+              {ev.name}
+            </option>
           ))}
         </select>
-        <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="border p-2 rounded">
+        <select
+          value={selectedType}
+          onChange={(e) => setSelectedType(e.target.value)}
+          className="border p-2 rounded"
+        >
           <option value="">Select Type</option>
           <option value="attendee">Attendee</option>
           <option value="speaker">Speaker</option>
@@ -1534,8 +1550,11 @@ export default function Home() {
         }}
       />
 
-      {/* QR Scanner (your old one) */}
-      <QRScanner onScan={(qrData) => setFormData({ ...formData, qr: qrData })} />
+      {/* QR Scanner with back camera */}
+      <QRScanner
+        constraints={{ facingMode: "environment" }} // ✅ Back camera
+        onScan={(qrData) => setFormData({ ...formData, qr: qrData })}
+      />
 
       {/* Editable form */}
       <div className="space-y-2">
@@ -1565,13 +1584,16 @@ export default function Home() {
         />
         <input
           placeholder="Phone"
-          value={formData.phone || ""}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          value={formData.number || ""} // ✅ backend expects "number"
+          onChange={(e) => setFormData({ ...formData, number: e.target.value })}
           className="border p-2 rounded w-full"
         />
       </div>
 
-      <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded">
+      <button
+        onClick={handleSave}
+        className="px-4 py-2 bg-blue-600 text-white rounded"
+      >
         Save to DB
       </button>
 

@@ -251,34 +251,48 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
 
   // ---- CAMERA ----
   const startCamera = async () => {
+  try {
+    let stream;
     try {
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
-          audio: false,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-        videoRef.current.setAttribute("playsInline", true);
-        videoRef.current.onloadeddata = async () => {
-          try {
-            await videoRef.current.play();
-            setStreaming(true);
-          } catch (err) {
-            console.error("Play error:", err);
-          }
-        };
-      }
-    } catch (err) {
-      alert(`Camera error: ${err.message}`);
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" }, // back camera if available
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+    } catch {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
     }
-  };
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+
+      // Ensure attributes for autoplay on mobile
+      videoRef.current.setAttribute("playsInline", "true");
+      videoRef.current.setAttribute("muted", "true");
+
+      // Try playing once metadata is loaded
+      videoRef.current.onloadedmetadata = async () => {
+        try {
+          await videoRef.current.play();
+          setStreaming(true);
+          console.log("📷 Camera streaming");
+        } catch (err) {
+          console.error("Video play error:", err);
+        }
+      };
+    }
+  } catch (err) {
+    alert(`Camera error: ${err.message}`);
+    console.error("Camera error", err);
+  }
+};
+
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -384,8 +398,21 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
               <button className="btn" onClick={startCamera}>📷 Start Scan</button>
             ) : (
               <div style={{ textAlign: "center" }}>
-                <video ref={videoRef} autoPlay playsInline
-                  style={{ width: "100%", maxWidth: "500px", height: "300px", objectFit: "cover", borderRadius: "8px" }}
+                <video
+  ref={videoRef}
+  autoPlay
+  muted
+  playsInline
+  style={{
+    width: "100%",
+    maxWidth: "500px",
+    height: "300px",
+    background: "green",   // so you see if nothing renders
+    objectFit: "cover",
+    borderRadius: "8px",
+  }}
+/>
+
                 />
                 <canvas ref={canvasRef} style={{ display: "none" }} />
                 <div style={{ marginTop: 10, display: "flex", gap: "10px", justifyContent: "center" }}>

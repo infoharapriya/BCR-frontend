@@ -486,9 +486,8 @@
 //     </div>
 //   );
 // }
-
-
 import { useRef, useState, useEffect } from "react";
+import Tesseract from "tesseract.js";   // ✅ OCR library
 import QRScanner from "./QRScanner";
 import { api } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
@@ -499,12 +498,12 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   const [result, setResult] = useState(null);
   const [formData, setFormData] = useState(null);
   const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);   // ✅ added missing state
 
   // camera
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [streaming, setStreaming] = useState(false);
-  const [capturedPreview, setCapturedPreview] = useState(null);
 
   const showMsg = (text, timeout = 2500) => {
     setMsg(text);
@@ -538,7 +537,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
     });
   }
 
-  // ---- OCR ----
+  // ---- OCR (upload) ----
   const handleExtract = async (chosenFile) => {
     try {
       const compressedFile = await compressImage(chosenFile);
@@ -572,35 +571,21 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   // ---- CAMERA ----
   const startCamera = async () => {
     try {
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-      }
-
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute("playsInline", "true");
         videoRef.current.setAttribute("muted", "true");
-
         videoRef.current.onloadedmetadata = async () => {
           try {
             await videoRef.current.play();
             setStreaming(true);
             console.log("📷 Camera streaming");
           } catch (err) {
-            console.error("Video play error:", err);
+            console.error("Play error:", err);
           }
         };
       }
@@ -611,37 +596,41 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
+      setStreaming(false);
     }
-    setStreaming(false);
   };
 
+  // ---- Capture + OCR ----
   const capturePhoto = async () => {
-    const v = videoRef.current,
-      c = canvasRef.current;
-    if (!v || !c) return;
+    if (!videoRef.current || !canvasRef.current) return;
+    setLoading(true);
 
-    c.width = v.videoWidth || 1280;
-    c.height = v.videoHeight || 720;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
 
-    const ctx = c.getContext("2d");
-    ctx.drawImage(v, 0, 0, c.width, c.height);
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    ctx.drawImage(videoRef.current, 0, 0);
 
-    const dataUrl = c.toDataURL("image/jpeg", 0.8);
-    setCapturedPreview(dataUrl);
+    try {
+      const { data: { text } } = await Tesseract.recognize(canvas, "eng");
+      console.log("📝 OCR Text:", text);
 
-    c.toBlob(
-      async (blob) => {
-        if (!blob) return;
-        const f = new File([blob], "capture.jpg", { type: "image/jpeg" });
-        await handleExtract(f);
-      },
-      "image/jpeg",
-      0.8
-    );
+      setResult({ raw: text, fields: {} });   // ✅ replaced onResult
+      setFormData({ event: selectedEvent, type: selectedType });
+    } catch (err) {
+      console.error("OCR error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   // ---- SAVE ----
   const handleSave = async () => {
@@ -698,11 +687,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
     showMsg("QR decoded.");
   };
 
-  // cleanup on unmount
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
+  // ---- UI ----
   return (
     <div>
       {/* Upload */}
@@ -725,95 +710,53 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
         </div>
 
         {/* Camera */}
-        <div className="col-6">
-          <div className="camera-box" style={{ marginTop: 10 }}>
-            {!streaming ? (
-              <button className="btn" onClick={startCamera}>
-                📷 Start Scan
-              </button>
-            ) : (
-              <div style={{ textAlign: "center", position: "relative" }}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  style={{
-                    width: "100%",
-                    maxWidth: "500px",
-                    height: "300px",
-                    background: "#000",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                  }}
-                />
+        <div className="space-y-4">
+          {!streaming ? (
+            <button
+              onClick={startCamera}
+              className="px-4 py-2 bg-green-600 text-white rounded"
+            >
+              Start Scan
+            </button>
+          ) : (
+            <button
+              onClick={stopCamera}
+              className="px-4 py-2 bg-red-600 text-white rounded"
+            >
+              Stop Scan
+            </button>
+          )}
 
-                {/* Overlay box with animated scan line */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "80%",
-                    height: "70%",
-                    border: "3px solid #fff",
-                    borderRadius: "8px",
-                    marginTop: "40px",
-                    overflow: "hidden",
-                    pointerEvents: "none",
-                  }}
-                >
-                  <div
-                    className="scan-line"
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "3px",
-                      background: "red",
-                      animation: "scan 2s linear infinite",
-                    }}
-                  />
+          <div className="relative inline-block w-full max-w-md">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full rounded-lg bg-black"
+              style={{ height: "300px", objectFit: "cover" }}
+            />
+
+            {streaming && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-3/4 h-2/4 border-4 border-white rounded-md">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-scan" />
                 </div>
-
-                <canvas ref={canvasRef} style={{ display: "none" }} />
-
-                <div
-                  style={{
-                    marginTop: 10,
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "center",
-                  }}
-                >
-                  <button className="btn" onClick={capturePhoto}>
-                    📸 Extract
-                  </button>
-                  <button className="btn secondary" onClick={stopCamera}>
-                    Stop Scan
-                  </button>
-                </div>
-
-                {capturedPreview && (
-                  <div style={{ marginTop: 12 }}>
-                    <p>Captured Image:</p>
-                    <img
-                      src={capturedPreview}
-                      alt="Captured"
-                      style={{
-                        width: "100%",
-                        maxWidth: "500px",
-                        border: "1px solid #ddd",
-                        borderRadius: "6px",
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             )}
           </div>
+
+          <canvas ref={canvasRef} style={{ display: "none" }} />
+
+          {streaming && (
+            <button
+              onClick={capturePhoto}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "📸 Extract"}
+            </button>
+          )}
         </div>
       </div>
 

@@ -485,10 +485,10 @@
 //       )}
 //     </div>
 //   );
-// }import { useRef, useState, useEffect } from "react";
+// }
 
 
-
+import { useRef, useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import { api } from "../utils/api";
 import { useAuth } from "../context/AuthContext";

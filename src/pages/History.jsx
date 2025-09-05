@@ -62,7 +62,7 @@ export default function History() {
     <tr key={r._id}>
       <td>{r.customId}</td>
       <td>{new Date(r.createdAt).toLocaleDateString()}</td>
-      <td>{r.event?.name}</td>
+      <td>{r.event}</td>
       <td>{r.type}</td>
       <td>{r.name}</td>
       <td>{r.designation}</td>

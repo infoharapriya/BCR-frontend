@@ -1,6 +1,8 @@
 // api.js
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+console.log(import.meta.env.VITE_API_URL);
+
 export async function api(url, { method = "GET", body, token, headers = {} } = {}) {
   const opts = { method, headers: { ...headers } };
 

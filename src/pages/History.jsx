@@ -31,6 +31,17 @@ export default function History() {
     }
   };
 
+const handleExport = () => {
+  const params = new URLSearchParams({
+    type: selectedType || "",
+    event: selectedEvent || "",
+    limit: 50,
+  });
+  window.open(`/api/ocr/export?${params.toString()}`, "_blank");
+};
+
+
+
   return (
     <div className="container">
       <div className="card">
@@ -84,6 +95,11 @@ export default function History() {
           </div>
         )}
       </div>
+
+      <button className="btn" onClick={handleExport}>
+  Export to Excel
+</button>
+
     </div>
   );
 }

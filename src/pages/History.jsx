@@ -273,7 +273,6 @@
 
 
 //08/09/2025
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -334,34 +333,39 @@ export default function History() {
     }
   };
 
+  // 🔹 Export Excel (reuses backend base URL)
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams({
+        type: selectedType || "",
+        event: selectedEvent || "",
+      });
 
-  //08/09/2025
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE}/api/ocr/export?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
- const handleExport = async () => {
-  try {
-    const res = await fetch("https://bcr-fullstack.onrender.com/api/ocr/export", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`, // ✅ send token from AuthContext
-      },
-    });
+      if (!res.ok) throw new Error("Export failed");
 
-    if (!res.ok) throw new Error("Export failed");
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "ocr_records.xlsx"; // ✅ auto download
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to export Excel: " + err.message);
-  }
-};
-
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ocr_records.xlsx"; // ✅ auto download
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export Excel: " + err.message);
+    }
+  };
 
   return (
     <div className="container">

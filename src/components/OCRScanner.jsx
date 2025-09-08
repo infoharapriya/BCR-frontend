@@ -1271,5 +1271,6 @@ const capturePhoto = async () => {
         </div>
       )}
     </div>
+    </div>
   );
 }

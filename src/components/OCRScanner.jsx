@@ -986,30 +986,53 @@ const handleExtract = async (chosenFile) => {
   };
 
   // ---- Capture + OCR ----
+  // const capturePhoto = async () => {
+  //   if (!videoRef.current || !canvasRef.current) return;
+  //   setLoading(true);
+
+  //   const canvas = canvasRef.current;
+  //   const ctx = canvas.getContext("2d");
+
+  //   canvas.width = videoRef.current.videoWidth;
+  //   canvas.height = videoRef.current.videoHeight;
+  //   ctx.drawImage(videoRef.current, 0, 0);
+
+  //   try {
+  //     const { data: { text } } = await Tesseract.recognize(canvas, "eng");
+  //     console.log("📝 OCR Text:", text);
+
+  //     // ✅ Update result + formData properly
+  //     setResult({ raw: text, fields: {} });
+  //     setFormData({ event: selectedEvent, type: selectedType });
+  //   } catch (err) {
+  //     console.error("OCR error:", err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    setLoading(true);
+  if (!videoRef.current || !canvasRef.current) return;
+  setLoading(true);
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+  const canvas = canvasRef.current;
+  const ctx = canvas.getContext("2d");
+  canvas.width = videoRef.current.videoWidth;
+  canvas.height = videoRef.current.videoHeight;
+  ctx.drawImage(videoRef.current, 0, 0);
 
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    ctx.drawImage(videoRef.current, 0, 0);
+  // Convert canvas to blob/file
+  canvas.toBlob(async (blob) => {
+    if (!blob) return;
+    const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+    
+    // ✅ Reuse the existing handleExtract to extract fields
+    await handleExtract(file);
 
-    try {
-      const { data: { text } } = await Tesseract.recognize(canvas, "eng");
-      console.log("📝 OCR Text:", text);
+    setLoading(false);
+  }, "image/jpeg", 0.9);
+};
 
-      // ✅ Update result + formData properly
-      setResult({ raw: text, fields: {} });
-      setFormData({ event: selectedEvent, type: selectedType });
-    } catch (err) {
-      console.error("OCR error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => () => stopCamera(), []);
 

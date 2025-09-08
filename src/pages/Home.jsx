@@ -1671,7 +1671,7 @@ export default function Home() {
               <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)}>
                 <option value="">-- Select --</option>
                 {events.map((ev) => (
-                  <option key={ev._id} value={ev.name}>{ev.name}</option>
+                  <option key={ev._id} value={ev._id}>{ev.name}</option>
                 ))}
               </select>
             </label>

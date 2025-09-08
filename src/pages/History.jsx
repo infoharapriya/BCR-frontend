@@ -43,7 +43,7 @@ export default function History() {
             <table className="table">
              <thead>
   <tr>
-    {/* <th>Custom ID</th> */}
+    <th>Custom ID</th>
     <th>Date</th>
     <th>Event</th>
     <th>Type</th>
@@ -60,7 +60,7 @@ export default function History() {
 <tbody>
   {rows.map(r => (
     <tr key={r._id}>
-      {/* <td>{r.customId}</td> */}
+      <td>{r.serial}</td>
       <td>{new Date(r.createdAt).toLocaleDateString()}</td>
       <td>{r.event?.name || "—"}</td>
       <td>{r.type}</td>

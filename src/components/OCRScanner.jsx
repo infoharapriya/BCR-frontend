@@ -1138,7 +1138,7 @@ const handleExtract = async (chosenFile) => {
     muted
     playsInline
     className="w-full rounded-lg bg-black"
-    style={{ height: "400px", objectFit: "cover" }}
+    style={{ height: "400px",width:"600px" ,objectFit: "cover" }}
   />
 </div>
 

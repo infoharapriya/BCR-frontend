@@ -1033,7 +1033,6 @@ const handleExtract = async (chosenFile) => {
 //   }, "image/jpeg", 0.9);
 // };
 //08/09/2025
-
 const capturePhoto = async () => {
   if (!videoRef.current || !canvasRef.current) return;
   setLoading(true);
@@ -1058,7 +1057,7 @@ const capturePhoto = async () => {
     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
     console.log("📸 Captured image:", file);
 
-    await handleExtract(file); // OCR upload
+    await handleExtract(file); // Upload to OCR API
   } catch (err) {
     console.error("Capture error:", err);
   } finally {
@@ -1164,7 +1163,18 @@ const capturePhoto = async () => {
             </button>
           )}
 
-          <div className="relative inline-block w-full max-w-2xl">
+          {/* <div className="relative inline-block w-full max-w-2xl"> */}
+  {/* <video
+    ref={videoRef}
+    autoPlay
+    muted
+    playsInline
+    className="w-full rounded-lg bg-black"
+    style={{ height: "400px", objectFit: "cover" }}
+  />
+</div> */}
+
+<div className="relative inline-block w-full max-w-2xl">
   <video
     ref={videoRef}
     autoPlay
@@ -1173,7 +1183,10 @@ const capturePhoto = async () => {
     className="w-full rounded-lg bg-black"
     style={{ height: "400px", objectFit: "cover" }}
   />
-</div>
+  {/* 👇 Add this */}
+  <canvas ref={canvasRef} style={{ display: "none" }} />
+
+
 
 {streaming && (
   <button

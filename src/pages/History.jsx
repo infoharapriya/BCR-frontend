@@ -47,6 +47,12 @@ const handleExport = () => {
       <div className="card">
         <h2 style={{ color: "var(--brand)" }}>Saved Records</h2>
         {msg && <div className={`notice ${msg.includes("fail") ? "error" : "success"}`}>{msg}</div>}
+
+
+       <button className="btn" onClick={handleExport} style={{ marginBottom: "10px" }}>
+    Export to Excel
+  </button>
+
         {rows.length === 0 ? (
           <p className="notice info">No records yet.</p>
         ) : (
@@ -95,10 +101,10 @@ const handleExport = () => {
           </div>
         )}
       </div>
-
+{/* 
       <button className="btn" onClick={handleExport}>
   Export to Excel
-</button>
+</button> */}
 
     </div>
   );

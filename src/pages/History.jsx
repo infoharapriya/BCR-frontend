@@ -58,9 +58,9 @@ export default function History() {
   </tr>
 </thead>
 <tbody>
-  {rows.map(r => (
+  {rows.map((r, index) => (
     <tr key={r._id}>
-      <td>{r.serial}</td>
+      <td>{index + 1}</td> {/* Serial number based on backend order */}
       <td>{new Date(r.createdAt).toLocaleDateString()}</td>
       <td>{r.event?.name || "—"}</td>
       <td>{r.type}</td>
@@ -78,6 +78,7 @@ export default function History() {
     </tr>
   ))}
 </tbody>
+
 </table>
 
           </div>

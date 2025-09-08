@@ -334,14 +334,34 @@ export default function History() {
     }
   };
 
-  const handleExport = () => {
-    const params = new URLSearchParams({
-      type: selectedType || "",
-      event: selectedEvent || "",
-      limit: 50,
+
+  //08/09/2025
+
+ const handleExport = async () => {
+  try {
+    const res = await fetch("https://bcr-fullstack.onrender.com/api/ocr/export", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`, // ✅ send token from AuthContext
+      },
     });
-    window.open(`/api/ocr/export?${params.toString()}`, "_blank");
-  };
+
+    if (!res.ok) throw new Error("Export failed");
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ocr_records.xlsx"; // ✅ auto download
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to export Excel: " + err.message);
+  }
+};
+
 
   return (
     <div className="container">

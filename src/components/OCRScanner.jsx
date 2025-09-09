@@ -1311,100 +1311,95 @@ const capturePhoto = async () => {
 //   );
 // }
 
-
-
+//9/9/2025
 return (
-    <div>
-      {/* Upload */}
-      <div className="row" style={{ marginTop: 10 }}>
-        <div className="col-6">
-          <form onSubmit={onSubmitUpload}>
-            <label>
-              Upload Image
-              <input
-                type="file"
-                className="input"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </label>
-            <button className="btn" type="submit">
-              Extract
-            </button>
-          </form>
-        </div>
-
-//         {/* Camera */}
-        <div className="space-y-4">
-          {!streaming ? (
-            <button
-              onClick={startCamera}
-              className="px-4 py-2 bg-green-600 text-white rounded"
-            >
-              Start Scan
-            </button>
-          ) : (
-            <button
-              onClick={stopCamera}
-              className="px-4 py-2 bg-red-600 text-white rounded"
-            >
-              Stop Scan
-            </button>
-          )}
-
-          <div className="relative inline-block w-full max-w-md">
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full rounded-lg bg-black"
-              style={{ height: "300px", objectFit: "cover" }}
+  <div className="p-4 space-y-6">
+    {/* Upload Section */}
+    <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex-1">
+        <form onSubmit={onSubmitUpload} className="space-y-2">
+          <label className="block text-sm font-medium">
+            Upload Image
+            <input
+              type="file"
+              accept="image/*"
+              className="mt-1 block w-full border rounded p-2"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
+          </label>
+          <button
+            className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow"
+            type="submit"
+          >
+            Extract
+          </button>
+        </form>
+      </div>
 
-            {streaming && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative w-3/4 h-2/4 border-4 border-white rounded-md">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-scan" />
-                </div>
-              </div>
-            )}
-          </div>
+      {/* Camera Section */}
+      <div className="flex-1 space-y-3">
+        {!streaming ? (
+          <button
+            onClick={startCamera}
+            className="w-full px-4 py-2 bg-green-600 text-white rounded shadow"
+          >
+            Start Scan
+          </button>
+        ) : (
+          <button
+            onClick={stopCamera}
+            className="w-full px-4 py-2 bg-red-600 text-white rounded shadow"
+          >
+            Stop Scan
+          </button>
+        )}
 
+        <div className="relative w-full">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full rounded-lg bg-black aspect-video"
+          />
           <canvas ref={canvasRef} style={{ display: "none" }} />
-
-          {streaming && (
-            <button
-              onClick={capturePhoto}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "📸 Extract"}
-            </button>
-          )}
         </div>
+
+        {streaming && (
+          <button
+            onClick={capturePhoto}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded shadow"
+            disabled={loading}
+          >
+            {loading ? "Processing..." : "📸 Extract"}
+          </button>
+        )}
       </div>
+    </div>
 
-//       {/* QR Scanner */}
-      <div style={{ marginTop: 16 }}>
-        <QRScanner onResult={onQRResult} />
+    {/* QR Scanner */}
+    <div>
+      <QRScanner onResult={onQRResult} />
+    </div>
+
+    {/* Notifications */}
+    {msg && (
+      <div
+        className={`p-2 rounded ${
+          msg.includes("fail")
+            ? "bg-red-100 text-red-700"
+            : "bg-green-100 text-green-700"
+        }`}
+      >
+        {msg}
       </div>
+    )}
 
-//       {/* Notifications */}
-      {msg && (
-        <div
-          className={`notice ${msg.includes("fail") ? "error" : "success"}`}
-        >
-          {msg}
-        </div>
-      )}
-
-//       {/* Editable form */}
-      {formData && (
-        <div className="row" style={{ marginTop: 16 }}>
-          <div className="col-12">
-            <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
-          </div>
+    {/* Editable Form */}
+    {formData && (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-blue-700">Review & Edit</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             ["Name", "name"],
             ["Designation", "designation"],
@@ -1413,47 +1408,50 @@ return (
             ["Email", "email"],
             ["Website", "site"],
           ].map(([label, key]) => (
-            <div className="col-6" key={key}>
-              <label>
-                {label}
-                <input
-                  className="input"
-                  value={formData[key] || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [key]: e.target.value })
-                  }
-                />
-              </label>
-            </div>
-          ))}
-          <div className="col-12">
-            <label>
-              Address
-              <textarea
-                className="input"
-                rows="3"
-                value={formData.address || ""}
+            <label key={key} className="block">
+              <span className="text-sm font-medium">{label}</span>
+              <input
+                className="mt-1 w-full border rounded p-2"
+                value={formData[key] || ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
+                  setFormData({ ...formData, [key]: e.target.value })
                 }
               />
             </label>
-          </div>
-          <div className="col-12 actions">
-            <button className="btn" onClick={handleSave}>
-              Save
-            </button>
-          </div>
+          ))}
         </div>
-      )}
+        <label className="block">
+          <span className="text-sm font-medium">Address</span>
+          <textarea
+            className="mt-1 w-full border rounded p-2"
+            rows="3"
+            value={formData.address || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, address: e.target.value })
+            }
+          />
+        </label>
+        <button
+          className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded shadow"
+          onClick={handleSave}
+        >
+          Save
+        </button>
+      </div>
+    )}
 
-//       {/* Raw OCR */}
-      {result?.raw && (
-        <div style={{ marginTop: 16 }}>
-          <h4>Raw Output</h4>
-          <textarea className="input" readOnly rows="6" value={result.raw} />
-        </div>
-      )}
-    </div>
-  );
+    {/* Raw OCR */}
+    {result?.raw && (
+      <div>
+        <h4 className="font-semibold mb-2">Raw Output</h4>
+        <textarea
+          className="w-full border rounded p-2"
+          readOnly
+          rows="6"
+          value={result.raw}
+        />
+      </div>
+    )}
+  </div>
+);
 }

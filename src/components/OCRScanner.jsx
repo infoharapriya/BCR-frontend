@@ -951,8 +951,12 @@ const handleExtract = async (chosenFile) => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          // width: { ideal: 1920 },
+          // height: { ideal: 1080 },
+          //9/9/2025
+           width: { ideal: 640 },   // much faster
+           height: { ideal: 480 },
+  
           aspectRatio: { ideal: 1.777 }, // widescreen
         },
         audio: false,
@@ -1033,39 +1037,6 @@ const handleExtract = async (chosenFile) => {
 //   }, "image/jpeg", 0.9);
 // };
 //08/09/2025
-//09/09/2025 changes
-// const capturePhoto = async () => {
-//   if (!videoRef.current || !canvasRef.current) return;
-//   setLoading(true);
-
-//   const canvas = canvasRef.current;
-//   const ctx = canvas.getContext("2d");
-//   canvas.width = videoRef.current.videoWidth;
-//   canvas.height = videoRef.current.videoHeight;
-//   ctx.drawImage(videoRef.current, 0, 0);
-
-//   try {
-//     const blob = await new Promise((resolve) =>
-//       canvas.toBlob(resolve, "image/jpeg", 0.9)
-//     );
-
-//     if (!blob) {
-//       console.error("❌ Canvas did not return a blob");
-//       setLoading(false);
-//       return;
-//     }
-
-//     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-//     console.log("📸 Captured image:", file);
-
-//     await handleExtract(file); // Upload to OCR API
-//   } catch (err) {
-//     console.error("Capture error:", err);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
 
 const capturePhoto = async () => {
   if (!videoRef.current || !canvasRef.current) return;
@@ -1073,29 +1044,62 @@ const capturePhoto = async () => {
 
   const canvas = canvasRef.current;
   const ctx = canvas.getContext("2d");
-
-  // Lower resolution for speed
-  canvas.width = 640;
-  canvas.height = 480;
-  ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+  canvas.width = videoRef.current.videoWidth;
+  canvas.height = videoRef.current.videoHeight;
+  ctx.drawImage(videoRef.current, 0, 0);
 
   try {
-    const { data: { text } } = await Tesseract.recognize(canvas, "eng", {
-      logger: (m) => console.log("🔎 OCR progress:", m),
-    });
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.6)
+    );
 
-    console.log("📝 OCR Text (local):", text);
+    if (!blob) {
+      console.error("❌ Canvas did not return a blob");
+      setLoading(false);
+      return;
+    }
 
-    setResult({ raw: text, fields: {} });
-    setFormData({ event: selectedEvent, type: selectedType });
-    showMsg("Local OCR complete.");
+    const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+    console.log("📸 Captured image:", file);
+
+    await handleExtract(file); // Upload to OCR API
   } catch (err) {
-    console.error("OCR error:", err);
-    showMsg("OCR failed: " + err.message, 4000);
+    console.error("Capture error:", err);
   } finally {
     setLoading(false);
   }
 };
+
+//09/09/2025 changes
+// const capturePhoto = async () => {
+//   if (!videoRef.current || !canvasRef.current) return;
+//   setLoading(true);
+
+//   const canvas = canvasRef.current;
+//   const ctx = canvas.getContext("2d");
+
+//   // Lower resolution for speed
+//   canvas.width = 640;
+//   canvas.height = 480;
+//   ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+//   try {
+//     const { data: { text } } = await Tesseract.recognize(canvas, "eng", {
+//       logger: (m) => console.log("🔎 OCR progress:", m),
+//     });
+
+//     console.log("📝 OCR Text (local):", text);
+
+//     setResult({ raw: text, fields: {} });
+//     setFormData({ event: selectedEvent, type: selectedType });
+//     showMsg("Local OCR complete.");
+//   } catch (err) {
+//     console.error("OCR error:", err);
+//     showMsg("OCR failed: " + err.message, 4000);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
 
 
   useEffect(() => () => stopCamera(), []);

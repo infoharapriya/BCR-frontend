@@ -1633,27 +1633,51 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   useEffect(() => () => stopCamera(), []);
 
   // ---- SAVE ----
+  // const handleSave = async () => {
+  //   try {
+  //     if (!formData) return alert("No data to save");
+  //     const payload = {
+  //       ...formData,
+  //       raw: result?.raw || "",
+  //       event: selectedEvent,
+  //       type: selectedType,
+  //     };
+
+  //     await api("/api/ocr/save", { method: "POST", token, body: payload });
+
+  //     showMsg("Saved!");
+  //     setResult(null);
+  //     setFormData(null);
+  //     setFile(null);
+  //     if (onSaved) onSaved();
+  //   } catch (e) {
+  //     showMsg("Save failed: " + e.message, 3500);
+  //   }
+  // };
+
+//09/09/2025
   const handleSave = async () => {
-    try {
-      if (!formData) return alert("No data to save");
-      const payload = {
-        ...formData,
-        raw: result?.raw || "",
-        event: selectedEvent,
-        type: selectedType,
-      };
+  try {
+    if (!formData) return alert("No data to save");
+    const payload = {
+      ...formData,
+      raw: formData.raw || result?.raw || "",   // ensure raw is included
+      event: selectedEvent,
+      type: selectedType,
+    };
 
-      await api("/api/ocr/save", { method: "POST", token, body: payload });
+    await api("/api/ocr/save", { method: "POST", token, body: payload });
 
-      showMsg("Saved!");
-      setResult(null);
-      setFormData(null);
-      setFile(null);
-      if (onSaved) onSaved();
-    } catch (e) {
-      showMsg("Save failed: " + e.message, 3500);
-    }
-  };
+    showMsg("Saved!");
+    setResult(null);
+    setFormData(null);
+    setFile(null);
+    if (onSaved) onSaved();
+  } catch (e) {
+    showMsg("Save failed: " + e.message, 3500);
+  }
+};
+
 
   // ---- QR RESULT ----
   const onQRResult = (decodedText) => {
@@ -1788,16 +1812,17 @@ return (
           ))}
         </div>
         <label>
-          <span className="label">Address</span>
-          <textarea
-            className="textarea"
-            rows="3"
-            value={formData.address || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, address: e.target.value })
-            }
-          />
-        </label>
+  <span className="label">Raw Text</span>
+  <textarea
+    className="textarea"
+    rows="4"
+    value={formData.raw || result?.raw || ""}
+    onChange={(e) =>
+      setFormData({ ...formData, raw: e.target.value })
+    }
+  />
+</label>
+
         <button className="btn btn-green" onClick={handleSave}>
           Save
         </button>

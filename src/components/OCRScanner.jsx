@@ -1463,7 +1463,7 @@ import { useRef, useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import { api } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
-import '../oceScanner.css';
+import '../css/ocrScanner.css';
 
 export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   const { token } = useAuth();

@@ -425,6 +425,7 @@ export default function History() {
                   <th>Website</th>
                   <th>Address</th>
                   <th>Actions</th>
+                  <th>Raw Text</th>
                 </tr>
               </thead>
               <tbody>
@@ -451,6 +452,7 @@ export default function History() {
                         Delete
                       </button>
                     </td>
+                    <td>Raw Text</td>
                   </tr>
                 ))}
               </tbody>

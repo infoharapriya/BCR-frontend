@@ -24,9 +24,10 @@
 
 /* Video */
 .video {
-  width: 100%;
+  width: 300px;
+  height: 200px;
   border-radius: 8px;
-  background: black;
+  /* background: black; */
   aspect-ratio: 16 / 9;
   object-fit: cover;
 }
@@ -132,4 +133,61 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
+}
+
+
+/* Editable Form Wrapper */
+.flex-col h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+/* Form Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Labels */
+.label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  display: block;
+  color: #374151;
+}
+
+/* Input + Textarea */
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  outline: none;
+  background: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: #2563eb; /* blue focus */
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+/* Textarea specific */
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Save Button */
+.btn.btn-green {
+  margin-top: 1rem;
+  align-self: flex-start;
 }

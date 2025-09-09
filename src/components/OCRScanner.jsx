@@ -839,8 +839,625 @@
 
 
 
+// import { useRef, useState, useEffect } from "react";
+// import Tesseract from "tesseract.js";
+// import QRScanner from "./QRScanner";
+// import { api } from "../utils/api";
+// import { useAuth } from "../context/AuthContext";
+
+// export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
+//   const { token } = useAuth();
+//   const [file, setFile] = useState(null);
+//   const [result, setResult] = useState(null);
+//   const [formData, setFormData] = useState(null);
+//   const [msg, setMsg] = useState("");
+//   const [loading, setLoading] = useState(false);
+
+//   const videoRef = useRef(null);
+//   const canvasRef = useRef(null);
+//   const [streaming, setStreaming] = useState(false);
+
+//   const showMsg = (text, timeout = 2500) => {
+//     setMsg(text);
+//     setTimeout(() => setMsg(""), timeout);
+//   };
+
+//   // ---- IMAGE COMPRESSION ---- (higher quality now)
+//   async function compressImage(file, maxWidth = 2000, quality = 0.9) {
+//     return new Promise((resolve) => {
+//       const img = new Image();
+//       const reader = new FileReader();
+//       reader.onload = (e) => (img.src = e.target.result);
+//       img.onload = () => {
+//         const canvas = document.createElement("canvas");
+//         const scale = Math.min(1, maxWidth / img.width);
+//         canvas.width = img.width * scale;
+//         canvas.height = img.height * scale;
+
+//         const ctx = canvas.getContext("2d");
+//         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+//         canvas.toBlob(
+//           (blob) =>
+//             resolve(new File([blob], "compressed.jpg", { type: "image/jpeg" })),
+//           "image/jpeg",
+//           quality
+//         );
+//       };
+//       reader.readAsDataURL(file);
+//     });
+//   }
+
+//   // ---- OCR (upload) ----
+// //   const handleExtract = async (chosenFile) => {
+// //     try {
+// //       const compressedFile = await compressImage(chosenFile);
+// //       const fd = new FormData();
+// //       fd.append("image", compressedFile);
+
+// //       const data = await api("/api/ocr/scan", {
+// //         method: "POST",
+// //         body: fd,
+// //         token,
+// //         isForm: true,
+// //       });
+
+// //       // ✅ Save both raw + fields into result and formData
+// //       setResult(data);
+// //       setFormData({
+// //         ...data.fields,
+// //         event: selectedEvent,
+// //         type: selectedType,
+// //       });
+// //     } catch (e) {
+// //       alert(e.message);
+// //     }
+// //   };
+
+
+// const handleExtract = async (chosenFile) => {
+//   try {
+//     const compressedFile = await compressImage(chosenFile);
+//     const fd = new FormData();
+//     fd.append("image", compressedFile);
+
+//     const data = await api("/api/ocr/scan", {
+//       method: "POST",
+//       body: fd,
+//       token,
+//       isForm: true,
+//     });
+
+//     setResult(data);
+//     setFormData({
+//       ...data.fields,        // 👈 auto-filled
+//       event: selectedEvent,
+//       type: selectedType,
+//     });
+//   } catch (e) {
+//     alert(e.message);
+//   }
+// };
+
+//   const onSubmitUpload = async (e) => {
+//     e.preventDefault();
+//     if (!file) return alert("Please select an image");
+//     await handleExtract(file);
+//   };
+
+//   // ---- CAMERA ----
+//   const startCamera = async () => {
+//     try {
+//       const stream = await navigator.mediaDevices.getUserMedia({
+//         video: {
+//           facingMode: { ideal: "environment" },
+//           // width: { ideal: 1920 },
+//           // height: { ideal: 1080 },
+//           //9/9/2025
+//            width: { ideal: 640 },   // much faster
+//             height: { ideal: 480 },
+  
+//           aspectRatio: { ideal: 1.777 }, // widescreen
+//         },
+//         audio: false,
+//       });
+//       if (videoRef.current) {
+//         videoRef.current.srcObject = stream;
+//         videoRef.current.setAttribute("playsInline", "true");
+//         videoRef.current.setAttribute("muted", "true");
+//         videoRef.current.onloadedmetadata = async () => {
+//           try {
+//             await videoRef.current.play();
+//             setStreaming(true);
+//             console.log("📷 Camera streaming at high resolution");
+//           } catch (err) {
+//             console.error("Play error:", err);
+//           }
+//         };
+//       }
+//     } catch (err) {
+//       alert(`Camera error: ${err.message}`);
+//       console.error("Camera error", err);
+//     }
+//   };
+
+//   const stopCamera = () => {
+//     if (videoRef.current?.srcObject) {
+//       videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+//       videoRef.current.srcObject = null;
+//       setStreaming(false);
+//     }
+//   };
+
+//   // ---- Capture + OCR ----
+//   // const capturePhoto = async () => {
+//   //   if (!videoRef.current || !canvasRef.current) return;
+//   //   setLoading(true);
+
+//   //   const canvas = canvasRef.current;
+//   //   const ctx = canvas.getContext("2d");
+
+//   //   canvas.width = videoRef.current.videoWidth;
+//   //   canvas.height = videoRef.current.videoHeight;
+//   //   ctx.drawImage(videoRef.current, 0, 0);
+
+//   //   try {
+//   //     const { data: { text } } = await Tesseract.recognize(canvas, "eng");
+//   //     console.log("📝 OCR Text:", text);
+
+//   //     // ✅ Update result + formData properly
+//   //     setResult({ raw: text, fields: {} });
+//   //     setFormData({ event: selectedEvent, type: selectedType });
+//   //   } catch (err) {
+//   //     console.error("OCR error:", err);
+//   //   } finally {
+//   //     setLoading(false);
+//   //   }
+//   // };
+
+// //   const capturePhoto = async () => {
+// //   if (!videoRef.current || !canvasRef.current) return;
+// //   setLoading(true);
+
+// //   const canvas = canvasRef.current;
+// //   const ctx = canvas.getContext("2d");
+// //   canvas.width = videoRef.current.videoWidth;
+// //   canvas.height = videoRef.current.videoHeight;
+// //   ctx.drawImage(videoRef.current, 0, 0);
+
+// //   // Convert canvas to blob/file
+// //   canvas.toBlob(async (blob) => {
+// //     if (!blob) return;
+// //     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+    
+// //     // ✅ Reuse the existing handleExtract to extract fields
+// //     await handleExtract(file);
+
+// //     setLoading(false);
+// //   }, "image/jpeg", 0.9);
+// // };
+// //08/09/2025
+
+// const capturePhoto = async () => {
+//   if (!videoRef.current || !canvasRef.current) return;
+//   setLoading(true);
+
+//   const canvas = canvasRef.current;
+//   const ctx = canvas.getContext("2d");
+//   canvas.width = videoRef.current.videoWidth;
+//   canvas.height = videoRef.current.videoHeight;
+//   ctx.drawImage(videoRef.current, 0, 0);
+
+//   try {
+//     const blob = await new Promise((resolve) =>
+//       canvas.toBlob(resolve, "image/jpeg", 0.9)
+//     );
+
+//     if (!blob) {
+//       console.error("❌ Canvas did not return a blob");
+//       setLoading(false);
+//       return;
+//     }
+
+//     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+//     console.log("📸 Captured image:", file);
+
+//     await handleExtract(file); // Upload to OCR API
+//   } catch (err) {
+//     console.error("Capture error:", err);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+// //09/09/2025 changes
+// // const capturePhoto = async () => {
+// //   if (!videoRef.current || !canvasRef.current) return;
+// //   setLoading(true);
+
+// //   const canvas = canvasRef.current;
+// //   const ctx = canvas.getContext("2d");
+
+// //   // Lower resolution for speed
+// //   canvas.width = 640;
+// //   canvas.height = 480;
+// //   ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+// //   try {
+// //     const { data: { text } } = await Tesseract.recognize(canvas, "eng", {
+// //       logger: (m) => console.log("🔎 OCR progress:", m),
+// //     });
+
+// //     console.log("📝 OCR Text (local):", text);
+
+// //     setResult({ raw: text, fields: {} });
+// //     setFormData({ event: selectedEvent, type: selectedType });
+// //     showMsg("Local OCR complete.");
+// //   } catch (err) {
+// //     console.error("OCR error:", err);
+// //     showMsg("OCR failed: " + err.message, 4000);
+// //   } finally {
+// //     setLoading(false);
+// //   }
+// // };
+
+
+//   useEffect(() => () => stopCamera(), []);
+
+//   // ---- SAVE ----
+//   const handleSave = async () => {
+//     try {
+//       if (!formData) return alert("No data to save");
+//       const payload = {
+//         ...formData,
+//         raw: result?.raw || "",
+//         event: selectedEvent,
+//         type: selectedType,
+//       };
+
+//       await api("/api/ocr/save", { method: "POST", token, body: payload });
+
+//       showMsg("Saved!");
+//       setResult(null);
+//       setFormData(null);
+//       setFile(null);
+//       if (onSaved) onSaved();
+//     } catch (e) {
+//       showMsg("Save failed: " + e.message, 3500);
+//     }
+//   };
+
+//   // ---- QR RESULT ----
+//   const onQRResult = (decodedText) => {
+//     let f = {};
+//     try {
+//       const j = JSON.parse(decodedText);
+//       if (j && typeof j === "object") f = j;
+//     } catch {}
+
+//     if (/BEGIN:VCARD/i.test(decodedText)) {
+//       decodedText.split(/\r?\n/).forEach((line) => {
+//         const [key, value] = line.split(/:(.+)/);
+//         if (!value) return;
+//         const k = key.toLowerCase();
+//         if (k.includes("fn")) f.name = value;
+//         if (k.includes("title")) f.designation = value;
+//         if (k.includes("org")) f.company = value;
+//         if (k === "tel") f.number = value;
+//         if (k === "email") f.email = value;
+//         if (k === "url") f.site = value;
+//         if (k === "adr") f.address = value.replace(/;/g, " ");
+//       });
+//     }
+
+//     if (!Object.keys(f).length && /^https?:\/\//i.test(decodedText)) {
+//       f.site = decodedText;
+//     }
+
+//     // ✅ Fill form fields when QR is decoded
+//     setResult({ raw: decodedText, fields: f });
+//     setFormData({ ...f, event: selectedEvent, type: selectedType });
+//     showMsg("QR decoded.");
+//   };
+
+// //   return (
+// //     <div>
+// //       {/* Upload */}
+// //       <div className="row" style={{ marginTop: 10 }}>
+// //         <div className="col-6">
+// //           <form onSubmit={onSubmitUpload}>
+// //             <label>
+// //               Upload Image
+// //               <input
+// //                 type="file"
+// //                 className="input"
+// //                 accept="image/*"
+// //                 onChange={(e) => setFile(e.target.files?.[0] || null)}
+// //               />
+// //             </label>
+// //             <button className="btn" type="submit">
+// //               Extract
+// //             </button>
+// //           </form>
+// //         </div>
+
+// //         {/* Camera */}
+// //         <div className="space-y-4">
+// //           {!streaming ? (
+// //             <button
+// //               onClick={startCamera}
+// //               className="px-4 py-2 bg-green-600 text-white rounded"
+// //             >
+// //               Start Scan
+// //             </button>
+// //           ) : (
+// //             <button
+// //               onClick={stopCamera}
+// //               className="px-4 py-2 bg-red-600 text-white rounded"
+// //             >
+// //               Stop Scan
+// //             </button>
+// //           )}
+
+// //           {/* <div className="relative inline-block w-full max-w-2xl"> */}
+// //   {/* <video
+// //     ref={videoRef}
+// //     autoPlay
+// //     muted
+// //     playsInline
+// //     className="w-full rounded-lg bg-black"
+// //     style={{ height: "400px", objectFit: "cover" }}
+// //   />
+// // </div> */}
+
+// // <div className="relative inline-block w-full max-w-2xl">
+// //   <video
+// //     ref={videoRef}
+// //     autoPlay
+// //     muted
+// //     playsInline
+// //     className="w-full rounded-lg bg-black"
+// //     style={{ height: "400px", objectFit: "cover" }}
+// //   />
+// //   {/* 👇 Add this */}
+// //   <canvas ref={canvasRef} style={{ display: "none" }} />
+
+
+
+// // {streaming && (
+// //   <button
+// //     onClick={capturePhoto}
+// //     className="px-4 py-2 bg-blue-600 text-white rounded"
+// //     disabled={loading}
+// //   >
+// //     {loading ? "Processing..." : "📸 Extract"}
+// //   </button>
+// // )}
+
+// //         </div>
+// //       </div>
+
+// //       {/* QR Scanner */}
+// //       <div style={{ marginTop: 16 }}>
+// //         <QRScanner onResult={onQRResult} />
+// //       </div>
+
+// //       {/* Notifications */}
+// //       {msg && (
+// //         <div
+// //           className={`notice ${msg.includes("fail") ? "error" : "success"}`}
+// //         >
+// //           {msg}
+// //         </div>
+// //       )}
+
+// //       {/* Editable form */}
+// //       {formData && (
+// //         <div className="row" style={{ marginTop: 16 }}>
+// //           <div className="col-12">
+// //             <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
+// //           </div>
+// //           {[
+// //             ["Name", "name"],
+// //             ["Designation", "designation"],
+// //             ["Company", "company"],
+// //             ["Number", "number"],
+// //             ["Email", "email"],
+// //             ["Website", "site"],
+// //           ].map(([label, key]) => (
+// //             <div className="col-6" key={key}>
+// //               <label>
+// //                 {label}
+// //                 <input
+// //                   className="input"
+// //                   value={formData[key] || ""}
+// //                   onChange={(e) =>
+// //                     setFormData({ ...formData, [key]: e.target.value })
+// //                   }
+// //                 />
+// //               </label>
+// //             </div>
+// //           ))}
+// //           <div className="col-12">
+// //             <label>
+// //               Address
+// //               <textarea
+// //                 className="input"
+// //                 rows="3"
+// //                 value={formData.address || ""}
+// //                 onChange={(e) =>
+// //                   setFormData({ ...formData, address: e.target.value })
+// //                 }
+// //               />
+// //             </label>
+// //           </div>
+// //           <div className="col-12 actions">
+// //             <button className="btn" onClick={handleSave}>
+// //               Save
+// //             </button>
+// //           </div>
+// //         </div>
+// //       )}
+
+// //       {/* Raw OCR */}
+// //       {result?.raw && (
+// //         <div style={{ marginTop: 16 }}>
+// //           <h4>Raw Output</h4>
+// //           <textarea className="input" readOnly rows="6" value={result.raw} />
+// //         </div>
+// //       )}
+// //     </div>
+// //     </div>
+// //   );
+// // }
+
+// //9/9/2025
+// return (
+//   <div className="p-4 space-y-6">
+//     {/* Upload Section */}
+//     <div className="flex flex-col md:flex-row gap-6">
+//       <div className="flex-1">
+//         <form onSubmit={onSubmitUpload} className="space-y-2">
+//           <label className="block text-sm font-medium">
+//             Upload Image
+//             <input
+//               type="file"
+//               accept="image/*"
+//               className="mt-1 block w-full border rounded p-2"
+//               onChange={(e) => setFile(e.target.files?.[0] || null)}
+//             />
+//           </label>
+//           <button
+//             className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow"
+//             type="submit"
+//           >
+//             Extract
+//           </button>
+//         </form>
+//       </div>
+
+//       {/* Camera Section */}
+//       <div className="flex-1 space-y-3">
+//         {!streaming ? (
+//           <button
+//             onClick={startCamera}
+//             className="w-full px-4 py-2 bg-green-600 text-white rounded shadow"
+//           >
+//             Start Scan
+//           </button>
+//         ) : (
+//           <button
+//             onClick={stopCamera}
+//             className="w-full px-4 py-2 bg-red-600 text-white rounded shadow"
+//           >
+//             Stop Scan
+//           </button>
+//         )}
+
+//         <div className="relative w-full">
+//           <video
+//             ref={videoRef}
+//             autoPlay
+//             muted
+//             playsInline
+//             className="w-full rounded-lg bg-black aspect-video"
+//           />
+//           <canvas ref={canvasRef} style={{ display: "none" }} />
+//         </div>
+
+//         {streaming && (
+//           <button
+//             onClick={capturePhoto}
+//             className="w-full px-4 py-2 bg-blue-600 text-white rounded shadow"
+//             disabled={loading}
+//           >
+//             {loading ? "Processing..." : "📸 Extract"}
+//           </button>
+//         )}
+//       </div>
+//     </div>
+
+//     {/* QR Scanner */}
+//     <div>
+//       <QRScanner onResult={onQRResult} />
+//     </div>
+
+//     {/* Notifications */}
+//     {msg && (
+//       <div
+//         className={`p-2 rounded ${
+//           msg.includes("fail")
+//             ? "bg-red-100 text-red-700"
+//             : "bg-green-100 text-green-700"
+//         }`}
+//       >
+//         {msg}
+//       </div>
+//     )}
+
+//     {/* Editable Form */}
+//     {formData && (
+//       <div className="space-y-4">
+//         <h3 className="text-lg font-semibold text-blue-700">Review & Edit</h3>
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//           {[
+//             ["Name", "name"],
+//             ["Designation", "designation"],
+//             ["Company", "company"],
+//             ["Number", "number"],
+//             ["Email", "email"],
+//             ["Website", "site"],
+//           ].map(([label, key]) => (
+//             <label key={key} className="block">
+//               <span className="text-sm font-medium">{label}</span>
+//               <input
+//                 className="mt-1 w-full border rounded p-2"
+//                 value={formData[key] || ""}
+//                 onChange={(e) =>
+//                   setFormData({ ...formData, [key]: e.target.value })
+//                 }
+//               />
+//             </label>
+//           ))}
+//         </div>
+//         <label className="block">
+//           <span className="text-sm font-medium">Address</span>
+//           <textarea
+//             className="mt-1 w-full border rounded p-2"
+//             rows="3"
+//             value={formData.address || ""}
+//             onChange={(e) =>
+//               setFormData({ ...formData, address: e.target.value })
+//             }
+//           />
+//         </label>
+//         <button
+//           className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded shadow"
+//           onClick={handleSave}
+//         >
+//           Save
+//         </button>
+//       </div>
+//     )}
+
+//     {/* Raw OCR */}
+//     {result?.raw && (
+//       <div>
+//         <h4 className="font-semibold mb-2">Raw Output</h4>
+//         <textarea
+//           className="w-full border rounded p-2"
+//           readOnly
+//           rows="6"
+//           value={result.raw}
+//         />
+//       </div>
+//     )}
+//   </div>
+// );
+// }
+
+
 import { useRef, useState, useEffect } from "react";
-import Tesseract from "tesseract.js";
 import QRScanner from "./QRScanner";
 import { api } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
@@ -852,6 +1469,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   const [formData, setFormData] = useState(null);
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0); // 👈 progress state
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -862,7 +1480,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
     setTimeout(() => setMsg(""), timeout);
   };
 
-  // ---- IMAGE COMPRESSION ---- (higher quality now)
+  // ---- IMAGE COMPRESSION ----
   async function compressImage(file, maxWidth = 2000, quality = 0.9) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -888,56 +1506,47 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
     });
   }
 
-  // ---- OCR (upload) ----
-//   const handleExtract = async (chosenFile) => {
-//     try {
-//       const compressedFile = await compressImage(chosenFile);
-//       const fd = new FormData();
-//       fd.append("image", compressedFile);
+  // ---- OCR (upload or camera) ----
+  const handleExtract = async (chosenFile) => {
+    try {
+      setLoading(true);
+      setProgress(10); // start at 10%
 
-//       const data = await api("/api/ocr/scan", {
-//         method: "POST",
-//         body: fd,
-//         token,
-//         isForm: true,
-//       });
+      const compressedFile = await compressImage(chosenFile);
+      setProgress(30); // after compression
 
-//       // ✅ Save both raw + fields into result and formData
-//       setResult(data);
-//       setFormData({
-//         ...data.fields,
-//         event: selectedEvent,
-//         type: selectedType,
-//       });
-//     } catch (e) {
-//       alert(e.message);
-//     }
-//   };
+      const fd = new FormData();
+      fd.append("image", compressedFile);
 
+      const data = await api("/api/ocr/scan", {
+        method: "POST",
+        body: fd,
+        token,
+        isForm: true,
+        // 👇 add a hook if backend supports progress
+        onUploadProgress: (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 40) + 30; // map to 30-70%
+            setProgress(percent);
+          }
+        },
+      });
 
-const handleExtract = async (chosenFile) => {
-  try {
-    const compressedFile = await compressImage(chosenFile);
-    const fd = new FormData();
-    fd.append("image", compressedFile);
-
-    const data = await api("/api/ocr/scan", {
-      method: "POST",
-      body: fd,
-      token,
-      isForm: true,
-    });
-
-    setResult(data);
-    setFormData({
-      ...data.fields,        // 👈 auto-filled
-      event: selectedEvent,
-      type: selectedType,
-    });
-  } catch (e) {
-    alert(e.message);
-  }
-};
+      setProgress(100);
+      setResult(data);
+      setFormData({
+        ...data.fields,
+        event: selectedEvent,
+        type: selectedType,
+      });
+      showMsg("Extraction complete.");
+    } catch (e) {
+      showMsg("Extract failed: " + e.message, 3500);
+    } finally {
+      setLoading(false);
+      setTimeout(() => setProgress(0), 1000); // reset progress bar
+    }
+  };
 
   const onSubmitUpload = async (e) => {
     e.preventDefault();
@@ -951,13 +1560,9 @@ const handleExtract = async (chosenFile) => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          // width: { ideal: 1920 },
-          // height: { ideal: 1080 },
-          //9/9/2025
-           width: { ideal: 640 },   // much faster
-            height: { ideal: 480 },
-  
-          aspectRatio: { ideal: 1.777 }, // widescreen
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          aspectRatio: { ideal: 1.777 },
         },
         audio: false,
       });
@@ -969,14 +1574,14 @@ const handleExtract = async (chosenFile) => {
           try {
             await videoRef.current.play();
             setStreaming(true);
-            console.log("📷 Camera streaming at high resolution");
+            console.log("📷 Camera streaming started");
           } catch (err) {
             console.error("Play error:", err);
           }
         };
       }
     } catch (err) {
-      alert(`Camera error: ${err.message}`);
+      showMsg("Camera error: " + err.message, 3500);
       console.error("Camera error", err);
     }
   };
@@ -989,118 +1594,38 @@ const handleExtract = async (chosenFile) => {
     }
   };
 
-  // ---- Capture + OCR ----
-  // const capturePhoto = async () => {
-  //   if (!videoRef.current || !canvasRef.current) return;
-  //   setLoading(true);
+  // ---- Capture + Upload OCR ----
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    setLoading(true);
+    setProgress(5);
 
-  //   const canvas = canvasRef.current;
-  //   const ctx = canvas.getContext("2d");
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    ctx.drawImage(videoRef.current, 0, 0);
 
-  //   canvas.width = videoRef.current.videoWidth;
-  //   canvas.height = videoRef.current.videoHeight;
-  //   ctx.drawImage(videoRef.current, 0, 0);
+    try {
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.9)
+      );
 
-  //   try {
-  //     const { data: { text } } = await Tesseract.recognize(canvas, "eng");
-  //     console.log("📝 OCR Text:", text);
+      if (!blob) {
+        console.error("❌ Canvas did not return a blob");
+        setLoading(false);
+        return;
+      }
 
-  //     // ✅ Update result + formData properly
-  //     setResult({ raw: text, fields: {} });
-  //     setFormData({ event: selectedEvent, type: selectedType });
-  //   } catch (err) {
-  //     console.error("OCR error:", err);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+      console.log("📸 Captured image:", file);
 
-//   const capturePhoto = async () => {
-//   if (!videoRef.current || !canvasRef.current) return;
-//   setLoading(true);
-
-//   const canvas = canvasRef.current;
-//   const ctx = canvas.getContext("2d");
-//   canvas.width = videoRef.current.videoWidth;
-//   canvas.height = videoRef.current.videoHeight;
-//   ctx.drawImage(videoRef.current, 0, 0);
-
-//   // Convert canvas to blob/file
-//   canvas.toBlob(async (blob) => {
-//     if (!blob) return;
-//     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-    
-//     // ✅ Reuse the existing handleExtract to extract fields
-//     await handleExtract(file);
-
-//     setLoading(false);
-//   }, "image/jpeg", 0.9);
-// };
-//08/09/2025
-
-const capturePhoto = async () => {
-  if (!videoRef.current || !canvasRef.current) return;
-  setLoading(true);
-
-  const canvas = canvasRef.current;
-  const ctx = canvas.getContext("2d");
-  canvas.width = videoRef.current.videoWidth;
-  canvas.height = videoRef.current.videoHeight;
-  ctx.drawImage(videoRef.current, 0, 0);
-
-  try {
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.9)
-    );
-
-    if (!blob) {
-      console.error("❌ Canvas did not return a blob");
-      setLoading(false);
-      return;
+      await handleExtract(file);
+    } catch (err) {
+      console.error("Capture error:", err);
+      showMsg("Capture failed: " + err.message, 4000);
     }
-
-    const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-    console.log("📸 Captured image:", file);
-
-    await handleExtract(file); // Upload to OCR API
-  } catch (err) {
-    console.error("Capture error:", err);
-  } finally {
-    setLoading(false);
-  }
-};
-
-//09/09/2025 changes
-// const capturePhoto = async () => {
-//   if (!videoRef.current || !canvasRef.current) return;
-//   setLoading(true);
-
-//   const canvas = canvasRef.current;
-//   const ctx = canvas.getContext("2d");
-
-//   // Lower resolution for speed
-//   canvas.width = 640;
-//   canvas.height = 480;
-//   ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-//   try {
-//     const { data: { text } } = await Tesseract.recognize(canvas, "eng", {
-//       logger: (m) => console.log("🔎 OCR progress:", m),
-//     });
-
-//     console.log("📝 OCR Text (local):", text);
-
-//     setResult({ raw: text, fields: {} });
-//     setFormData({ event: selectedEvent, type: selectedType });
-//     showMsg("Local OCR complete.");
-//   } catch (err) {
-//     console.error("OCR error:", err);
-//     showMsg("OCR failed: " + err.message, 4000);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
+  };
 
   useEffect(() => () => stopCamera(), []);
 
@@ -1154,304 +1679,161 @@ const capturePhoto = async () => {
       f.site = decodedText;
     }
 
-    // ✅ Fill form fields when QR is decoded
     setResult({ raw: decodedText, fields: f });
     setFormData({ ...f, event: selectedEvent, type: selectedType });
     showMsg("QR decoded.");
   };
 
-//   return (
-//     <div>
-//       {/* Upload */}
-//       <div className="row" style={{ marginTop: 10 }}>
-//         <div className="col-6">
-//           <form onSubmit={onSubmitUpload}>
-//             <label>
-//               Upload Image
-//               <input
-//                 type="file"
-//                 className="input"
-//                 accept="image/*"
-//                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-//               />
-//             </label>
-//             <button className="btn" type="submit">
-//               Extract
-//             </button>
-//           </form>
-//         </div>
+  return (
+    <div className="p-4 space-y-6">
+      {/* Upload Section */}
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex-1">
+          <form onSubmit={onSubmitUpload} className="space-y-2">
+            <label className="block text-sm font-medium">
+              Upload Image
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-1 block w-full border rounded p-2"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </label>
+            <button
+              className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow"
+              type="submit"
+            >
+              Extract
+            </button>
+          </form>
+        </div>
 
-//         {/* Camera */}
-//         <div className="space-y-4">
-//           {!streaming ? (
-//             <button
-//               onClick={startCamera}
-//               className="px-4 py-2 bg-green-600 text-white rounded"
-//             >
-//               Start Scan
-//             </button>
-//           ) : (
-//             <button
-//               onClick={stopCamera}
-//               className="px-4 py-2 bg-red-600 text-white rounded"
-//             >
-//               Stop Scan
-//             </button>
-//           )}
+        {/* Camera Section */}
+        <div className="flex-1 space-y-3">
+          {!streaming ? (
+            <button
+              onClick={startCamera}
+              className="w-full px-4 py-2 bg-green-600 text-white rounded shadow"
+            >
+              Start Scan
+            </button>
+          ) : (
+            <button
+              onClick={stopCamera}
+              className="w-full px-4 py-2 bg-red-600 text-white rounded shadow"
+            >
+              Stop Scan
+            </button>
+          )}
 
-//           {/* <div className="relative inline-block w-full max-w-2xl"> */}
-//   {/* <video
-//     ref={videoRef}
-//     autoPlay
-//     muted
-//     playsInline
-//     className="w-full rounded-lg bg-black"
-//     style={{ height: "400px", objectFit: "cover" }}
-//   />
-// </div> */}
+          <div className="relative w-full">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full rounded-lg bg-black aspect-video"
+            />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+          </div>
 
-// <div className="relative inline-block w-full max-w-2xl">
-//   <video
-//     ref={videoRef}
-//     autoPlay
-//     muted
-//     playsInline
-//     className="w-full rounded-lg bg-black"
-//     style={{ height: "400px", objectFit: "cover" }}
-//   />
-//   {/* 👇 Add this */}
-//   <canvas ref={canvasRef} style={{ display: "none" }} />
+          {streaming && (
+            <button
+              onClick={capturePhoto}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded shadow"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "📸 Extract"}
+            </button>
+          )}
+        </div>
+      </div>
 
+      {/* Progress Bar */}
+      {loading && progress > 0 && (
+        <div className="w-full bg-gray-200 rounded h-3 overflow-hidden">
+          <div
+            className="bg-blue-600 h-3 transition-all duration-200"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
 
+      {/* QR Scanner */}
+      <div>
+        <QRScanner onResult={onQRResult} />
+      </div>
 
-// {streaming && (
-//   <button
-//     onClick={capturePhoto}
-//     className="px-4 py-2 bg-blue-600 text-white rounded"
-//     disabled={loading}
-//   >
-//     {loading ? "Processing..." : "📸 Extract"}
-//   </button>
-// )}
+      {/* Notifications */}
+      {msg && (
+        <div
+          className={`p-2 rounded ${
+            msg.includes("fail")
+              ? "bg-red-100 text-red-700"
+              : "bg-green-100 text-green-700"
+          }`}
+        >
+          {msg}
+        </div>
+      )}
 
-//         </div>
-//       </div>
-
-//       {/* QR Scanner */}
-//       <div style={{ marginTop: 16 }}>
-//         <QRScanner onResult={onQRResult} />
-//       </div>
-
-//       {/* Notifications */}
-//       {msg && (
-//         <div
-//           className={`notice ${msg.includes("fail") ? "error" : "success"}`}
-//         >
-//           {msg}
-//         </div>
-//       )}
-
-//       {/* Editable form */}
-//       {formData && (
-//         <div className="row" style={{ marginTop: 16 }}>
-//           <div className="col-12">
-//             <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
-//           </div>
-//           {[
-//             ["Name", "name"],
-//             ["Designation", "designation"],
-//             ["Company", "company"],
-//             ["Number", "number"],
-//             ["Email", "email"],
-//             ["Website", "site"],
-//           ].map(([label, key]) => (
-//             <div className="col-6" key={key}>
-//               <label>
-//                 {label}
-//                 <input
-//                   className="input"
-//                   value={formData[key] || ""}
-//                   onChange={(e) =>
-//                     setFormData({ ...formData, [key]: e.target.value })
-//                   }
-//                 />
-//               </label>
-//             </div>
-//           ))}
-//           <div className="col-12">
-//             <label>
-//               Address
-//               <textarea
-//                 className="input"
-//                 rows="3"
-//                 value={formData.address || ""}
-//                 onChange={(e) =>
-//                   setFormData({ ...formData, address: e.target.value })
-//                 }
-//               />
-//             </label>
-//           </div>
-//           <div className="col-12 actions">
-//             <button className="btn" onClick={handleSave}>
-//               Save
-//             </button>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Raw OCR */}
-//       {result?.raw && (
-//         <div style={{ marginTop: 16 }}>
-//           <h4>Raw Output</h4>
-//           <textarea className="input" readOnly rows="6" value={result.raw} />
-//         </div>
-//       )}
-//     </div>
-//     </div>
-//   );
-// }
-
-//9/9/2025
-return (
-  <div className="p-4 space-y-6">
-    {/* Upload Section */}
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="flex-1">
-        <form onSubmit={onSubmitUpload} className="space-y-2">
-          <label className="block text-sm font-medium">
-            Upload Image
-            <input
-              type="file"
-              accept="image/*"
-              className="mt-1 block w-full border rounded p-2"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+      {/* Editable Form */}
+      {formData && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-blue-700">Review & Edit</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              ["Name", "name"],
+              ["Designation", "designation"],
+              ["Company", "company"],
+              ["Number", "number"],
+              ["Email", "email"],
+              ["Website", "site"],
+            ].map(([label, key]) => (
+              <label key={key} className="block">
+                <span className="text-sm font-medium">{label}</span>
+                <input
+                  className="mt-1 w-full border rounded p-2"
+                  value={formData[key] || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [key]: e.target.value })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <label className="block">
+            <span className="text-sm font-medium">Address</span>
+            <textarea
+              className="mt-1 w-full border rounded p-2"
+              rows="3"
+              value={formData.address || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, address: e.target.value })
+              }
             />
           </label>
           <button
-            className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow"
-            type="submit"
+            className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded shadow"
+            onClick={handleSave}
           >
-            Extract
+            Save
           </button>
-        </form>
-      </div>
-
-      {/* Camera Section */}
-      <div className="flex-1 space-y-3">
-        {!streaming ? (
-          <button
-            onClick={startCamera}
-            className="w-full px-4 py-2 bg-green-600 text-white rounded shadow"
-          >
-            Start Scan
-          </button>
-        ) : (
-          <button
-            onClick={stopCamera}
-            className="w-full px-4 py-2 bg-red-600 text-white rounded shadow"
-          >
-            Stop Scan
-          </button>
-        )}
-
-        <div className="relative w-full">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className="w-full rounded-lg bg-black aspect-video"
-          />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
         </div>
+      )}
 
-        {streaming && (
-          <button
-            onClick={capturePhoto}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded shadow"
-            disabled={loading}
-          >
-            {loading ? "Processing..." : "📸 Extract"}
-          </button>
-        )}
-      </div>
-    </div>
-
-    {/* QR Scanner */}
-    <div>
-      <QRScanner onResult={onQRResult} />
-    </div>
-
-    {/* Notifications */}
-    {msg && (
-      <div
-        className={`p-2 rounded ${
-          msg.includes("fail")
-            ? "bg-red-100 text-red-700"
-            : "bg-green-100 text-green-700"
-        }`}
-      >
-        {msg}
-      </div>
-    )}
-
-    {/* Editable Form */}
-    {formData && (
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-blue-700">Review & Edit</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            ["Name", "name"],
-            ["Designation", "designation"],
-            ["Company", "company"],
-            ["Number", "number"],
-            ["Email", "email"],
-            ["Website", "site"],
-          ].map(([label, key]) => (
-            <label key={key} className="block">
-              <span className="text-sm font-medium">{label}</span>
-              <input
-                className="mt-1 w-full border rounded p-2"
-                value={formData[key] || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, [key]: e.target.value })
-                }
-              />
-            </label>
-          ))}
-        </div>
-        <label className="block">
-          <span className="text-sm font-medium">Address</span>
+      {/* Raw OCR */}
+      {result?.raw && (
+        <div>
+          <h4 className="font-semibold mb-2">Raw Output</h4>
           <textarea
-            className="mt-1 w-full border rounded p-2"
-            rows="3"
-            value={formData.address || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, address: e.target.value })
-            }
+            className="w-full border rounded p-2"
+            readOnly
+            rows="6"
+            value={result.raw}
           />
-        </label>
-        <button
-          className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded shadow"
-          onClick={handleSave}
-        >
-          Save
-        </button>
-      </div>
-    )}
-
-    {/* Raw OCR */}
-    {result?.raw && (
-      <div>
-        <h4 className="font-semibold mb-2">Raw Output</h4>
-        <textarea
-          className="w-full border rounded p-2"
-          readOnly
-          rows="6"
-          value={result.raw}
-        />
-      </div>
-    )}
-  </div>
-);
+        </div>
+      )}
+    </div>
+  );
 }

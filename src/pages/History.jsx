@@ -452,7 +452,7 @@ export default function History() {
                         Delete
                       </button>
                     </td>
-                    <td>Raw Text</td>
+                    <td>{r.raw}</td>
                   </tr>
                 ))}
               </tbody>

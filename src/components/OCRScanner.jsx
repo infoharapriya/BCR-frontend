@@ -1457,10 +1457,13 @@
 // }
 
 
+//09/09/2025
+
 import { useRef, useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import { api } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
+import '../oceScanner.css';
 
 export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   const { token } = useAuth();
@@ -1683,157 +1686,123 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
     setFormData({ ...f, event: selectedEvent, type: selectedType });
     showMsg("QR decoded.");
   };
-
-  return (
-    <div className="p-4 space-y-6">
-      {/* Upload Section */}
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1">
-          <form onSubmit={onSubmitUpload} className="space-y-2">
-            <label className="block text-sm font-medium">
-              Upload Image
-              <input
-                type="file"
-                accept="image/*"
-                className="mt-1 block w-full border rounded p-2"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </label>
-            <button
-              className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow"
-              type="submit"
-            >
-              Extract
-            </button>
-          </form>
-        </div>
-
-        {/* Camera Section */}
-        <div className="flex-1 space-y-3">
-          {!streaming ? (
-            <button
-              onClick={startCamera}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded shadow"
-            >
-              Start Scan
-            </button>
-          ) : (
-            <button
-              onClick={stopCamera}
-              className="w-full px-4 py-2 bg-red-600 text-white rounded shadow"
-            >
-              Stop Scan
-            </button>
-          )}
-
-          <div className="relative w-full">
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full rounded-lg bg-black aspect-video"
-            />
-            <canvas ref={canvasRef} style={{ display: "none" }} />
-          </div>
-
-          {streaming && (
-            <button
-              onClick={capturePhoto}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded shadow"
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "📸 Extract"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      {loading && progress > 0 && (
-        <div className="w-full bg-gray-200 rounded h-3 overflow-hidden">
-          <div
-            className="bg-blue-600 h-3 transition-all duration-200"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
-
-      {/* QR Scanner */}
-      <div>
-        <QRScanner onResult={onQRResult} />
-      </div>
-
-      {/* Notifications */}
-      {msg && (
-        <div
-          className={`p-2 rounded ${
-            msg.includes("fail")
-              ? "bg-red-100 text-red-700"
-              : "bg-green-100 text-green-700"
-          }`}
-        >
-          {msg}
-        </div>
-      )}
-
-      {/* Editable Form */}
-      {formData && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-blue-700">Review & Edit</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              ["Name", "name"],
-              ["Designation", "designation"],
-              ["Company", "company"],
-              ["Number", "number"],
-              ["Email", "email"],
-              ["Website", "site"],
-            ].map(([label, key]) => (
-              <label key={key} className="block">
-                <span className="text-sm font-medium">{label}</span>
-                <input
-                  className="mt-1 w-full border rounded p-2"
-                  value={formData[key] || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [key]: e.target.value })
-                  }
-                />
-              </label>
-            ))}
-          </div>
-          <label className="block">
-            <span className="text-sm font-medium">Address</span>
-            <textarea
-              className="mt-1 w-full border rounded p-2"
-              rows="3"
-              value={formData.address || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, address: e.target.value })
-              }
+return (
+  <div className="ocr-container">
+    {/* Upload Section */}
+    <div className="flex-row">
+      <div className="flex-col" style={{ flex: 1 }}>
+        <form onSubmit={onSubmitUpload} className="flex-col">
+          <label className="label">
+            Upload Image
+            <input
+              type="file"
+              accept="image/*"
+              className="input"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
           </label>
-          <button
-            className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded shadow"
-            onClick={handleSave}
-          >
-            Save
+          <button className="btn btn-blue" type="submit">
+            Extract
           </button>
-        </div>
-      )}
+        </form>
+      </div>
 
-      {/* Raw OCR */}
-      {result?.raw && (
+      {/* Camera Section */}
+      <div className="flex-col" style={{ flex: 1 }}>
+        {!streaming ? (
+          <button onClick={startCamera} className="btn btn-green">
+            Start Scan
+          </button>
+        ) : (
+          <button onClick={stopCamera} className="btn btn-red">
+            Stop Scan
+          </button>
+        )}
+
         <div>
-          <h4 className="font-semibold mb-2">Raw Output</h4>
-          <textarea
-            className="w-full border rounded p-2"
-            readOnly
-            rows="6"
-            value={result.raw}
-          />
+          <video ref={videoRef} autoPlay muted playsInline className="video" />
+          <canvas ref={canvasRef} style={{ display: "none" }} />
         </div>
-      )}
+
+        {streaming && (
+          <button
+            onClick={capturePhoto}
+            className="btn btn-blue"
+            disabled={loading}
+          >
+            {loading ? "Processing..." : "📸 Extract"}
+          </button>
+        )}
+      </div>
     </div>
-  );
+
+      {/* QR Scanner */}
+    <div>
+       <QRScanner onResult={onQRResult} />
+    </div>
+
+
+    {/* Progress Bar */}
+    {loading && progress > 0 && (
+      <div className="progress-container">
+        <div className="progress-bar" style={{ width: `${progress}%` }} />
+      </div>
+    )}
+
+
+
+    {/* Notification */}
+    {msg && (
+      <div
+        className={`alert ${
+          msg.includes("fail") ? "alert-error" : "alert-success"
+        }`}
+      >
+        {msg}
+      </div>
+    )}
+
+    {/* Editable Form */}
+    {formData && (
+      <div className="flex-col">
+        <h3>Review & Edit</h3>
+        <div className="grid">
+          {[
+            ["Name", "name"],
+            ["Designation", "designation"],
+            ["Company", "company"],
+            ["Number", "number"],
+            ["Email", "email"],
+            ["Website", "site"],
+          ].map(([label, key]) => (
+            <label key={key}>
+              <span className="label">{label}</span>
+              <input
+                className="input"
+                value={formData[key] || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, [key]: e.target.value })
+                }
+              />
+            </label>
+          ))}
+        </div>
+        <label>
+          <span className="label">Address</span>
+          <textarea
+            className="textarea"
+            rows="3"
+            value={formData.address || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, address: e.target.value })
+            }
+          />
+        </label>
+        <button className="btn btn-green" onClick={handleSave}>
+          Save
+        </button>
+      </div>
+    )}
+  </div>
+);
 }

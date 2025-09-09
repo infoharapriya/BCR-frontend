@@ -955,7 +955,7 @@ const handleExtract = async (chosenFile) => {
           // height: { ideal: 1080 },
           //9/9/2025
            width: { ideal: 640 },   // much faster
-           height: { ideal: 480 },
+            height: { ideal: 480 },
   
           aspectRatio: { ideal: 1.777 }, // widescreen
         },
@@ -1050,7 +1050,7 @@ const capturePhoto = async () => {
 
   try {
     const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.6)
+      canvas.toBlob(resolve, "image/jpeg", 0.9)
     );
 
     if (!blob) {
@@ -1160,7 +1160,160 @@ const capturePhoto = async () => {
     showMsg("QR decoded.");
   };
 
-  return (
+//   return (
+//     <div>
+//       {/* Upload */}
+//       <div className="row" style={{ marginTop: 10 }}>
+//         <div className="col-6">
+//           <form onSubmit={onSubmitUpload}>
+//             <label>
+//               Upload Image
+//               <input
+//                 type="file"
+//                 className="input"
+//                 accept="image/*"
+//                 onChange={(e) => setFile(e.target.files?.[0] || null)}
+//               />
+//             </label>
+//             <button className="btn" type="submit">
+//               Extract
+//             </button>
+//           </form>
+//         </div>
+
+//         {/* Camera */}
+//         <div className="space-y-4">
+//           {!streaming ? (
+//             <button
+//               onClick={startCamera}
+//               className="px-4 py-2 bg-green-600 text-white rounded"
+//             >
+//               Start Scan
+//             </button>
+//           ) : (
+//             <button
+//               onClick={stopCamera}
+//               className="px-4 py-2 bg-red-600 text-white rounded"
+//             >
+//               Stop Scan
+//             </button>
+//           )}
+
+//           {/* <div className="relative inline-block w-full max-w-2xl"> */}
+//   {/* <video
+//     ref={videoRef}
+//     autoPlay
+//     muted
+//     playsInline
+//     className="w-full rounded-lg bg-black"
+//     style={{ height: "400px", objectFit: "cover" }}
+//   />
+// </div> */}
+
+// <div className="relative inline-block w-full max-w-2xl">
+//   <video
+//     ref={videoRef}
+//     autoPlay
+//     muted
+//     playsInline
+//     className="w-full rounded-lg bg-black"
+//     style={{ height: "400px", objectFit: "cover" }}
+//   />
+//   {/* 👇 Add this */}
+//   <canvas ref={canvasRef} style={{ display: "none" }} />
+
+
+
+// {streaming && (
+//   <button
+//     onClick={capturePhoto}
+//     className="px-4 py-2 bg-blue-600 text-white rounded"
+//     disabled={loading}
+//   >
+//     {loading ? "Processing..." : "📸 Extract"}
+//   </button>
+// )}
+
+//         </div>
+//       </div>
+
+//       {/* QR Scanner */}
+//       <div style={{ marginTop: 16 }}>
+//         <QRScanner onResult={onQRResult} />
+//       </div>
+
+//       {/* Notifications */}
+//       {msg && (
+//         <div
+//           className={`notice ${msg.includes("fail") ? "error" : "success"}`}
+//         >
+//           {msg}
+//         </div>
+//       )}
+
+//       {/* Editable form */}
+//       {formData && (
+//         <div className="row" style={{ marginTop: 16 }}>
+//           <div className="col-12">
+//             <h3 style={{ color: "var(--brand)" }}>Review & Edit</h3>
+//           </div>
+//           {[
+//             ["Name", "name"],
+//             ["Designation", "designation"],
+//             ["Company", "company"],
+//             ["Number", "number"],
+//             ["Email", "email"],
+//             ["Website", "site"],
+//           ].map(([label, key]) => (
+//             <div className="col-6" key={key}>
+//               <label>
+//                 {label}
+//                 <input
+//                   className="input"
+//                   value={formData[key] || ""}
+//                   onChange={(e) =>
+//                     setFormData({ ...formData, [key]: e.target.value })
+//                   }
+//                 />
+//               </label>
+//             </div>
+//           ))}
+//           <div className="col-12">
+//             <label>
+//               Address
+//               <textarea
+//                 className="input"
+//                 rows="3"
+//                 value={formData.address || ""}
+//                 onChange={(e) =>
+//                   setFormData({ ...formData, address: e.target.value })
+//                 }
+//               />
+//             </label>
+//           </div>
+//           <div className="col-12 actions">
+//             <button className="btn" onClick={handleSave}>
+//               Save
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Raw OCR */}
+//       {result?.raw && (
+//         <div style={{ marginTop: 16 }}>
+//           <h4>Raw Output</h4>
+//           <textarea className="input" readOnly rows="6" value={result.raw} />
+//         </div>
+//       )}
+//     </div>
+//     </div>
+//   );
+// }
+
+
+
+return (
     <div>
       {/* Upload */}
       <div className="row" style={{ marginTop: 10 }}>
@@ -1181,7 +1334,7 @@ const capturePhoto = async () => {
           </form>
         </div>
 
-        {/* Camera */}
+//         {/* Camera */}
         <div className="space-y-4">
           {!streaming ? (
             <button
@@ -1199,50 +1352,45 @@ const capturePhoto = async () => {
             </button>
           )}
 
-          {/* <div className="relative inline-block w-full max-w-2xl"> */}
-  {/* <video
-    ref={videoRef}
-    autoPlay
-    muted
-    playsInline
-    className="w-full rounded-lg bg-black"
-    style={{ height: "400px", objectFit: "cover" }}
-  />
-</div> */}
+          <div className="relative inline-block w-full max-w-md">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full rounded-lg bg-black"
+              style={{ height: "300px", objectFit: "cover" }}
+            />
 
-<div className="relative inline-block w-full max-w-2xl">
-  <video
-    ref={videoRef}
-    autoPlay
-    muted
-    playsInline
-    className="w-full rounded-lg bg-black"
-    style={{ height: "400px", objectFit: "cover" }}
-  />
-  {/* 👇 Add this */}
-  <canvas ref={canvasRef} style={{ display: "none" }} />
+            {streaming && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-3/4 h-2/4 border-4 border-white rounded-md">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-red-500 animate-scan" />
+                </div>
+              </div>
+            )}
+          </div>
 
+          <canvas ref={canvasRef} style={{ display: "none" }} />
 
-
-{streaming && (
-  <button
-    onClick={capturePhoto}
-    className="px-4 py-2 bg-blue-600 text-white rounded"
-    disabled={loading}
-  >
-    {loading ? "Processing..." : "📸 Extract"}
-  </button>
-)}
-
+          {streaming && (
+            <button
+              onClick={capturePhoto}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "📸 Extract"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* QR Scanner */}
+//       {/* QR Scanner */}
       <div style={{ marginTop: 16 }}>
         <QRScanner onResult={onQRResult} />
       </div>
 
-      {/* Notifications */}
+//       {/* Notifications */}
       {msg && (
         <div
           className={`notice ${msg.includes("fail") ? "error" : "success"}`}
@@ -1251,7 +1399,7 @@ const capturePhoto = async () => {
         </div>
       )}
 
-      {/* Editable form */}
+//       {/* Editable form */}
       {formData && (
         <div className="row" style={{ marginTop: 16 }}>
           <div className="col-12">
@@ -1299,14 +1447,13 @@ const capturePhoto = async () => {
         </div>
       )}
 
-      {/* Raw OCR */}
+//       {/* Raw OCR */}
       {result?.raw && (
         <div style={{ marginTop: 16 }}>
           <h4>Raw Output</h4>
           <textarea className="input" readOnly rows="6" value={result.raw} />
         </div>
       )}
-    </div>
     </div>
   );
 }

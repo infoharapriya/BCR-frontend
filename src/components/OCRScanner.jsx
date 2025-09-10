@@ -2140,6 +2140,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
               ["Number", "number"],
               ["Email", "email"],
               ["Website", "site"],
+              ["Address","address"]
             ].map(([label, key]) => (
               <label key={key}>
                 <span className="label">{label}</span>

@@ -441,6 +441,7 @@ export default function History() {
                     <td>{r.email}</td>
                     <td>{r.site}</td>
                     <td>{r.address}</td>
+                    <td>{r.raw}</td>
                     <td className="actions">
                       <Link className="btn" to={`/edit/${r._id}`}>
                         Edit
@@ -452,7 +453,7 @@ export default function History() {
                         Delete
                       </button>
                     </td>
-                    <td>{r.raw}</td>
+                    
                   </tr>
                 ))}
               </tbody>

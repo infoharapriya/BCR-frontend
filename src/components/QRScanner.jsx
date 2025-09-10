@@ -21,7 +21,7 @@ export default function QRScanner({ onResult }) {
     try {
       await qr.start(
         { facingMode: "environment" },
-         { fps: 10, qrbox: { width: 250, height: 250 } },
+         { fps: 10, qrbox: { width: 350, height: 350 } },
          //10/09/2025
          (decodedText) => {
     onResult(decodedText);

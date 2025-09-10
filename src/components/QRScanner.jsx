@@ -21,11 +21,13 @@ export default function QRScanner({ onResult }) {
     try {
       await qr.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (text) => {
-          onResult(text);
-          stop();
-        },
+         { fps: 10, qrbox: { width: 250, height: 250 } },
+         //10/09/2025
+         (decodedText) => {
+    onResult(decodedText);
+          // onResult(text)
+          // stop()
+      },
         () => {}
       );
       setScanning(true);
@@ -51,7 +53,7 @@ export default function QRScanner({ onResult }) {
       ) : (
         <button className="btn secondary" onClick={stop}>Stop Scan</button>
       )}
-      <div id={qrDivId} style={{ width: 200, height: 100, marginTop: 10, background: "#fff" }} />
+      <div id={qrDivId} style={{ width: 300, height: 300, marginTop: 5, background: "#fff" }} />
     </div>
   );
 }

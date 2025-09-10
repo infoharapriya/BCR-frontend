@@ -57,6 +57,7 @@ const save = async () => {
           <div className="col-6"><label>Email<input className="input" value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} /></label></div>
           <div className="col-6"><label>Website<input className="input" value={form.site || ""} onChange={e => setForm({ ...form, site: e.target.value })} /></label></div>
           <div className="col-12"><label>Address<textarea className="input" rows="3" value={form.address || ""} onChange={e => setForm({ ...form, address: e.target.value })} /></label></div>
+          <div className="col-12"><label>Raw Text<textarea className="input" rows="3" value={form.raw || ""} onChange={e => setForm({ ...form, raw: e.target.value })} /></label></div>
         </div>
         <div className="actions"><button className="btn" onClick={save}>Save</button></div>
       </div>

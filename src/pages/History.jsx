@@ -424,8 +424,9 @@ export default function History() {
                   <th>Email</th>
                   <th>Website</th>
                   <th>Address</th>
+                   <th>Raw Text</th>
                   <th>Actions</th>
-                  <th>Raw Text</th>
+                 
                 </tr>
               </thead>
               <tbody>

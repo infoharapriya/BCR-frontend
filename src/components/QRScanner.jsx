@@ -51,7 +51,7 @@ export default function QRScanner({ onResult }) {
       ) : (
         <button className="btn secondary" onClick={stop}>Stop Scan</button>
       )}
-      <div id={qrDivId} style={{ width: 320, height: 320, marginTop: 10, background: "#fff" }} />
+      <div id={qrDivId} style={{ width: 200, height: 100, marginTop: 10, background: "#fff" }} />
     </div>
   );
 }

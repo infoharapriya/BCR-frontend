@@ -1563,8 +1563,10 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          // width: { ideal: 640 },
+          // height: { ideal: 480 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
           aspectRatio: { ideal: 1.777 },
         },
         audio: false,

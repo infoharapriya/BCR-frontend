@@ -166,8 +166,6 @@
 
 // export default OCRScanner;
 
-
-
 // import { useRef, useState } from "react";
 // import QRScanner from "./QRScanner";
 // import { api } from "../utils/api";
@@ -293,7 +291,6 @@
 //   }
 // };
 
-
 //   const stopCamera = () => {
 //     if (videoRef.current && videoRef.current.srcObject) {
 //       videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
@@ -413,7 +410,6 @@
 //   }}
 // />
 
-                
 //                 <canvas ref={canvasRef} style={{ display: "none" }} />
 //                 <div style={{ marginTop: 10, display: "flex", gap: "10px", justifyContent: "center" }}>
 //                   <button className="btn" onClick={capturePhoto}>📸 Extract</button>
@@ -486,8 +482,6 @@
 //     </div>
 //   );
 // }
-
-
 
 // import { useRef, useState, useEffect } from "react";
 // import Tesseract from "tesseract.js";   // ✅ OCR library
@@ -836,9 +830,6 @@
 //   );
 // }
 
-
-
-
 // import { useRef, useState, useEffect } from "react";
 // import Tesseract from "tesseract.js";
 // import QRScanner from "./QRScanner";
@@ -914,7 +905,6 @@
 // //     }
 // //   };
 
-
 // const handleExtract = async (chosenFile) => {
 //   try {
 //     const compressedFile = await compressImage(chosenFile);
@@ -956,7 +946,7 @@
 //           //9/9/2025
 //            width: { ideal: 640 },   // much faster
 //             height: { ideal: 480 },
-  
+
 //           aspectRatio: { ideal: 1.777 }, // widescreen
 //         },
 //         audio: false,
@@ -1029,7 +1019,7 @@
 // //   canvas.toBlob(async (blob) => {
 // //     if (!blob) return;
 // //     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-    
+
 // //     // ✅ Reuse the existing handleExtract to extract fields
 // //     await handleExtract(file);
 
@@ -1100,7 +1090,6 @@
 // //     setLoading(false);
 // //   }
 // // };
-
 
 //   useEffect(() => () => stopCamera(), []);
 
@@ -1221,8 +1210,6 @@
 // //   />
 // //   {/* 👇 Add this */}
 // //   <canvas ref={canvasRef} style={{ display: "none" }} />
-
-
 
 // // {streaming && (
 // //   <button
@@ -1456,7 +1443,6 @@
 // );
 // }
 
-
 //09/09/2025
 
 // import { useRef, useState, useEffect } from "react";
@@ -1680,7 +1666,6 @@
 //   }
 // };
 
-
 //   // ---- QR RESULT ----
 //   const onQRResult = (decodedText) => {
 //     let f = {};
@@ -1775,8 +1760,6 @@
 //       </div>
 //     )} */}
 
-
-
 //     {/* Notification */}
 //     {msg && (
 //       <div
@@ -1834,15 +1817,13 @@
 // );
 // }
 
-
-
 //10/9/2025
 
 import { useRef, useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import { api } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
-import '../css/ocrScanner.css';
+import "../css/ocrScanner.css";
 
 export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   const { token } = useAuth();
@@ -1887,33 +1868,32 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
   //   });
   // }
 
-    //10/09/2025
+  //10/09/2025
 
-    async function compressImage(file, maxWidth = 1000, quality = 0.7) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
-    reader.onload = (e) => (img.src = e.target.result);
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const scale = Math.min(1, maxWidth / img.width);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+  async function compressImage(file, maxWidth = 1000, quality = 0.7) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => (img.src = e.target.result);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
 
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      canvas.toBlob(
-        (blob) =>
-          resolve(new File([blob], "compressed.jpg", { type: "image/jpeg" })),
-        "image/jpeg",
-        quality
-      );
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
+        canvas.toBlob(
+          (blob) =>
+            resolve(new File([blob], "compressed.jpg", { type: "image/jpeg" })),
+          "image/jpeg",
+          quality
+        );
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   // ---- OCR (upload or camera) ----
   const handleExtract = async (chosenFile) => {
@@ -1938,8 +1918,6 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
         event: selectedEvent,
         type: selectedType,
       });
-
-    
 
       showMsg("Extraction complete.");
     } catch (e) {
@@ -2119,7 +2097,13 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
           )}
 
           <div>
-            <video ref={videoRef} autoPlay muted playsInline className="video" />
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="video"
+            />
             <canvas ref={canvasRef} style={{ display: "none" }} />
           </div>
 
@@ -2171,7 +2155,7 @@ export default function OCRScanner({ selectedEvent, selectedType, onSaved }) {
               ["Number", "number"],
               ["Email", "email"],
               ["Website", "site"],
-              ["Address","address"]
+              ["Address", "address"],
             ].map(([label, key]) => (
               <label key={key}>
                 <span className="label">{label}</span>

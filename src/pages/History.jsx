@@ -292,7 +292,7 @@ export default function History() {
       const params = new URLSearchParams({
         type: selectedType || "",
         event: selectedEvent || "",
-        limit: 100,
+        limit: 200,
       });
 
       const data = await api(`/api/ocr/history?${params.toString()}`, { token });
